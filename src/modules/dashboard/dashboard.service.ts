@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ContractStatus, PaymentStatus, PropertyStatus } from '@prisma/client';
+import { ContractStatus, MaintenanceStatus, PaymentStatus, PropertyStatus } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 
 @Injectable()
@@ -33,8 +33,9 @@ export class DashboardService {
       }),
       this.prisma.maintenanceTicket.count({
         where: {
-          property: { ownerId },
-          status: { in: ['OPEN', 'IN_PROGRESS'] },
+          ownerId,
+          isActive: true,
+          estado: { in: [MaintenanceStatus.PENDIENTE, MaintenanceStatus.EN_PROGRESO, MaintenanceStatus.ESPERANDO_REPUESTOS] },
         },
       }),
       this.prisma.payment.aggregate({
@@ -87,8 +88,12 @@ export class DashboardService {
         },
       }),
       this.prisma.maintenanceTicket.findMany({
-        where: { property: { ownerId }, status: { in: ['OPEN', 'IN_PROGRESS'] } },
-        orderBy: { priority: 'desc' },
+        where: {
+          ownerId,
+          isActive: true,
+          estado: { in: [MaintenanceStatus.PENDIENTE, MaintenanceStatus.EN_PROGRESO, MaintenanceStatus.ESPERANDO_REPUESTOS] },
+        },
+        orderBy: { prioridad: 'desc' },
         take: 5,
         include: { property: { select: { nombre: true } } },
       }),

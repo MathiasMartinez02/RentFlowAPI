@@ -1,13 +1,23 @@
 export enum MaintenanceStatus {
-  OPEN = 'OPEN',
-  IN_PROGRESS = 'IN_PROGRESS',
-  RESOLVED = 'RESOLVED',
-  CLOSED = 'CLOSED',
+  PENDIENTE = 'PENDIENTE',
+  EN_PROGRESO = 'EN_PROGRESO',
+  ESPERANDO_REPUESTOS = 'ESPERANDO_REPUESTOS',
+  RESUELTO = 'RESUELTO',
+  CERRADO = 'CERRADO',
 }
 
 export enum MaintenancePriority {
-  LOW = 'LOW',
-  MEDIUM = 'MEDIUM',
-  HIGH = 'HIGH',
-  URGENT = 'URGENT',
+  BAJA = 'BAJA',
+  MEDIA = 'MEDIA',
+  ALTA = 'ALTA',
+  URGENTE = 'URGENTE',
+}
+
+export enum MaintenanceCategory {
+  PLOMERIA = 'PLOMERIA',
+  ELECTRICIDAD = 'ELECTRICIDAD',
+  PINTURA = 'PINTURA',
+  LIMPIEZA = 'LIMPIEZA',
+  SEGURIDAD = 'SEGURIDAD',
+  GENERAL = 'GENERAL',
 }

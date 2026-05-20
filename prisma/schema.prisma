@@ -59,17 +59,27 @@ enum PaymentMethod {
 }
 
 enum MaintenanceStatus {
-  OPEN
-  IN_PROGRESS
-  RESOLVED
-  CLOSED
+  PENDIENTE
+  EN_PROGRESO
+  ESPERANDO_REPUESTOS
+  RESUELTO
+  CERRADO
 }
 
 enum MaintenancePriority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
+  BAJA
+  MEDIA
+  ALTA
+  URGENTE
+}
+
+enum MaintenanceCategory {
+  PLOMERIA
+  ELECTRICIDAD
+  PINTURA
+  LIMPIEZA
+  SEGURIDAD
+  GENERAL
 }
 
 enum NotificationType {
@@ -97,12 +107,13 @@ model User {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  refreshTokens RefreshToken[]
-  properties    Property[]
-  tenants       Tenant[]
-  contracts     Contract[]
-  payments      Payment[]
-  notifications Notification[]
+  refreshTokens        RefreshToken[]
+  properties           Property[]
+  tenants              Tenant[]
+  contracts            Contract[]
+  payments             Payment[]
+  notifications        Notification[]
+  maintenanceTickets   MaintenanceTicket[]
 
   @@map("users")
 }
@@ -178,8 +189,9 @@ model Tenant {
   propertyId String?
   property   Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
 
-  contracts Contract[]
-  payments  Payment[]
+  contracts          Contract[]
+  payments           Payment[]
+  maintenanceTickets MaintenanceTicket[]
 
   @@unique([email, ownerId])
   @@unique([dni, ownerId])
@@ -262,23 +274,36 @@ model Payment {
 }
 
 model MaintenanceTicket {
-  id          String              @id @default(cuid())
-  title       String
-  description String              @db.Text
-  status      MaintenanceStatus   @default(OPEN)
-  priority    MaintenancePriority @default(MEDIUM)
-  category    String?
-  resolvedAt  DateTime?
-  notes       String?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  id               String              @id @default(cuid())
+  titulo           String
+  descripcion      String              @db.Text
+  categoria        MaintenanceCategory @default(GENERAL)
+  prioridad        MaintenancePriority @default(MEDIA)
+  estado           MaintenanceStatus   @default(PENDIENTE)
+  costoEstimado    Decimal?            @db.Decimal(10, 2)
+  costoFinal       Decimal?            @db.Decimal(10, 2)
+  fechaResolucion  DateTime?
+  assignedTo       String?
+  observaciones    String?             @db.Text
+  isActive         Boolean             @default(true)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   propertyId String
   property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@index([ownerId])
   @@index([propertyId])
-  @@index([status])
-  @@index([priority])
+  @@index([tenantId])
+  @@index([estado])
+  @@index([prioridad])
+  @@index([categoria])
   @@map("maintenance_tickets")
 }
 

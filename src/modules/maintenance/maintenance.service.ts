@@ -1,64 +1,86 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { MaintenanceStatus } from '@prisma/client';
-import { PrismaService } from '../../database/prisma.service';
-import { PaginationDto } from '../../common/dto/pagination.dto';
-import { buildPaginatedResult, getPaginationMeta } from '../../common/utils/pagination.util';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { MaintenanceRepository } from './repositories/maintenance.repository';
 import { CreateMaintenanceDto } from './dto/create-maintenance.dto';
+import { UpdateMaintenanceDto } from './dto/update-maintenance.dto';
+import { QueryMaintenanceDto } from './dto/query-maintenance.dto';
+import { MaintenanceStatus } from '../../common/enums/maintenance.enum';
 
 @Injectable()
 export class MaintenanceService {
   private readonly logger = new Logger(MaintenanceService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly maintenanceRepository: MaintenanceRepository) {}
 
-  async create(dto: CreateMaintenanceDto) {
-    const property = await this.prisma.property.findUnique({ where: { id: dto.propertyId } });
-    if (!property) throw new NotFoundException('Property not found');
+  async create(ownerId: string, dto: CreateMaintenanceDto) {
+    const property = await this.maintenanceRepository.findPropertyByOwner(dto.propertyId, ownerId);
+    if (!property) throw new NotFoundException('Propiedad no encontrada');
 
-    const ticket = await this.prisma.maintenanceTicket.create({ data: dto });
-    this.logger.log(`Maintenance ticket created: ${ticket.id}`);
-    return { message: 'Maintenance ticket created successfully', data: ticket };
+    if (dto.tenantId) {
+      const tenant = await this.maintenanceRepository.findTenantByOwner(dto.tenantId, ownerId);
+      if (!tenant) throw new NotFoundException('Inquilino no encontrado');
+    }
+
+    const ticket = await this.maintenanceRepository.create(ownerId, dto);
+    this.logger.log(`Ticket de mantenimiento creado: ${ticket.id} por usuario ${ownerId}`);
+    return ticket;
   }
 
-  async findAll(pagination: PaginationDto) {
-    const { skip, take, page, limit } = getPaginationMeta(pagination);
-
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.maintenanceTicket.findMany({
-        skip,
-        take,
-        orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
-        include: { property: { select: { id: true, nombre: true, direccion: true } } },
-      }),
-      this.prisma.maintenanceTicket.count(),
-    ]);
-
-    return {
-      message: 'Maintenance tickets retrieved successfully',
-      data: buildPaginatedResult(items, total, page, limit),
-    };
+  async findAll(ownerId: string, query: QueryMaintenanceDto) {
+    return this.maintenanceRepository.findMany(ownerId, query);
   }
 
-  async findOne(id: string) {
-    const ticket = await this.prisma.maintenanceTicket.findUnique({
-      where: { id },
-      include: { property: true },
-    });
-    if (!ticket) throw new NotFoundException(`Ticket ${id} not found`);
-    return { message: 'Ticket retrieved successfully', data: ticket };
+  async findOne(id: string, ownerId: string) {
+    const ticket = await this.maintenanceRepository.findById(id, ownerId);
+    if (!ticket) throw new NotFoundException(`Ticket ${id} no encontrado`);
+    return ticket;
   }
 
-  async updateStatus(id: string, status: MaintenanceStatus, notes?: string) {
-    await this.findOne(id);
+  async update(id: string, ownerId: string, dto: UpdateMaintenanceDto) {
+    const ticket = await this.findOne(id, ownerId);
 
-    const ticket = await this.prisma.maintenanceTicket.update({
-      where: { id },
-      data: {
-        status,
-        notes,
-        ...(status === MaintenanceStatus.RESOLVED && { resolvedAt: new Date() }),
-      },
-    });
-    return { message: 'Ticket status updated', data: ticket };
+    if (ticket.estado === MaintenanceStatus.CERRADO) {
+      throw new BadRequestException('No se puede modificar un ticket cerrado');
+    }
+
+    const nuevoEstado = dto.estado ?? (ticket.estado as MaintenanceStatus);
+
+    if (
+      nuevoEstado === MaintenanceStatus.RESUELTO &&
+      ticket.estado !== MaintenanceStatus.RESUELTO &&
+      !dto.fechaResolucion
+    ) {
+      dto.fechaResolucion = new Date().toISOString();
+    }
+
+    const data: Prisma.MaintenanceTicketUpdateInput = {};
+
+    if (dto.titulo !== undefined) data.titulo = dto.titulo;
+    if (dto.descripcion !== undefined) data.descripcion = dto.descripcion;
+    if (dto.categoria !== undefined) data.categoria = dto.categoria as any;
+    if (dto.prioridad !== undefined) data.prioridad = dto.prioridad as any;
+    if (dto.estado !== undefined) data.estado = dto.estado as any;
+    if (dto.costoEstimado !== undefined) data.costoEstimado = dto.costoEstimado;
+    if (dto.costoFinal !== undefined) data.costoFinal = dto.costoFinal;
+    if (dto.fechaResolucion !== undefined) data.fechaResolucion = new Date(dto.fechaResolucion);
+    if (dto.assignedTo !== undefined) data.assignedTo = dto.assignedTo;
+    if (dto.observaciones !== undefined) data.observaciones = dto.observaciones;
+
+    return this.maintenanceRepository.update(id, data);
+  }
+
+  async remove(id: string, ownerId: string) {
+    const ticket = await this.findOne(id, ownerId);
+
+    if (ticket.estado === MaintenanceStatus.CERRADO) {
+      throw new BadRequestException('El ticket ya está cerrado');
+    }
+
+    await this.maintenanceRepository.softDelete(id);
+    this.logger.log(`Ticket de mantenimiento cerrado: ${id} por usuario ${ownerId}`);
+  }
+
+  async getOverview(ownerId: string) {
+    return this.maintenanceRepository.getOverviewStats(ownerId);
   }
 }
