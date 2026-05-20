@@ -6,8 +6,9 @@ import { UpdateUserDto } from './dto/update-user.dto';
 const USER_SELECT = {
   id: true,
   email: true,
-  firstName: true,
-  lastName: true,
+  nombre: true,
+  apellido: true,
+  empresa: true,
   phone: true,
   avatar: true,
   role: true,
@@ -47,7 +48,11 @@ export class UsersService {
 
   async update(id: string, dto: UpdateUserDto) {
     await this.findById(id);
-    const user = await this.prisma.user.update({ where: { id }, data: dto, select: USER_SELECT });
+    const user = await this.prisma.user.update({
+      where: { id },
+      data: dto,
+      select: USER_SELECT,
+    });
     return { message: 'User updated successfully', data: user };
   }
 

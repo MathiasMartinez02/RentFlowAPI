@@ -9,10 +9,14 @@ export class CreateUserDto {
   password: string;
 
   @IsString()
-  firstName: string;
+  nombre: string;
 
   @IsString()
-  lastName: string;
+  apellido: string;
+
+  @IsOptional()
+  @IsString()
+  empresa?: string;
 
   @IsOptional()
   @IsString()

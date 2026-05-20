@@ -32,15 +32,14 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     if (process.env.NODE_ENV !== 'test') {
       throw new Error('cleanDatabase is only available in test environment');
     }
-    const tablenames = await this.$queryRaw<{ tablename: string }[]>`
-      SELECT tablename FROM pg_tables WHERE schemaname='public'
+    const tables = await this.$queryRaw<{ TABLE_NAME: string }[]>`
+      SELECT TABLE_NAME FROM information_schema.tables
+      WHERE table_schema = DATABASE() AND TABLE_NAME != '_prisma_migrations'
     `;
-    for (const { tablename } of tablenames) {
-      if (tablename !== '_prisma_migrations') {
-        await this.$executeRawUnsafe(
-          `TRUNCATE TABLE "public"."${tablename}" CASCADE;`,
-        );
-      }
+    await this.$executeRaw`SET FOREIGN_KEY_CHECKS = 0`;
+    for (const { TABLE_NAME } of tables) {
+      await this.$executeRawUnsafe(`TRUNCATE TABLE \`${TABLE_NAME}\``);
     }
+    await this.$executeRaw`SET FOREIGN_KEY_CHECKS = 1`;
   }
 }

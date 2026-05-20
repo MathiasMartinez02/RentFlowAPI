@@ -6,15 +6,21 @@ export const envValidationSchema = Joi.object({
     .default('development'),
   PORT: Joi.number().default(3000),
   DATABASE_URL: Joi.string().required(),
+
   JWT_SECRET: Joi.string().min(32).required(),
-  JWT_EXPIRATION: Joi.string().default('7d'),
+  JWT_REFRESH_SECRET: Joi.string().min(32).required(),
+  ACCESS_TOKEN_EXPIRES: Joi.string().default('15m'),
+  REFRESH_TOKEN_EXPIRES: Joi.string().default('7d'),
+
   SWAGGER_ENABLED: Joi.boolean().default(true),
   LOG_LEVEL: Joi.string()
     .valid('error', 'warn', 'info', 'debug', 'verbose')
     .default('debug'),
-  POSTGRES_USER: Joi.string().optional(),
-  POSTGRES_PASSWORD: Joi.string().optional(),
-  POSTGRES_DB: Joi.string().optional(),
-  POSTGRES_PORT: Joi.number().optional(),
+
+  MYSQL_ROOT_PASSWORD: Joi.string().optional(),
+  MYSQL_USER: Joi.string().optional(),
+  MYSQL_PASSWORD: Joi.string().optional(),
+  MYSQL_DB: Joi.string().optional(),
+  MYSQL_PORT: Joi.number().optional(),
   ADMINER_PORT: Joi.number().optional(),
 });

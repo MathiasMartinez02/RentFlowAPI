@@ -11,13 +11,13 @@ services:
     ports:
       - '${PORT:-3000}:3000'
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://rentflow:rentflow_password@postgres:5432/rentflow}
+      DATABASE_URL: ${DATABASE_URL:-mysql://rentflow:rentflow_password@mysql:3306/rentflow}
       JWT_SECRET: ${JWT_SECRET:-rentflow-super-secret-jwt-key-change-in-production}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-7d}
       NODE_ENV: ${NODE_ENV:-development}
       PORT: ${PORT:-3000}
     depends_on:
-      postgres:
+      mysql:
         condition: service_healthy
     volumes:
       - ./src:/app/src
@@ -25,20 +25,21 @@ services:
     networks:
       - rentflow-network
 
-  postgres:
-    image: postgres:15-alpine
-    container_name: rentflow-postgres
+  mysql:
+    image: mysql:8.0
+    container_name: rentflow-mysql
     restart: unless-stopped
     ports:
-      - '${POSTGRES_PORT:-5432}:5432'
+      - '${MYSQL_PORT:-3306}:3306'
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-rentflow}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rentflow_password}
-      POSTGRES_DB: ${POSTGRES_DB:-rentflow}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DB:-rentflow}
+      MYSQL_USER: ${MYSQL_USER:-rentflow}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-rentflow_password}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-rentflow} -d ${POSTGRES_DB:-rentflow}']
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-prootpassword']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -53,12 +54,12 @@ services:
     ports:
       - '${ADMINER_PORT:-8080}:8080'
     depends_on:
-      - postgres
+      - mysql
     networks:
       - rentflow-network
 
 volumes:
-  postgres_data:
+  mysql_data:
 
 networks:
   rentflow-network:

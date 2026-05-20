@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -11,8 +11,7 @@ datasource db {
 
 enum Role {
   ADMIN
-  LANDLORD
-  TENANT
+  USER
 }
 
 enum PropertyStatus {
@@ -72,19 +71,34 @@ model User {
   id        String   @id @default(cuid())
   email     String   @unique
   password  String
-  firstName String
-  lastName  String
+  nombre    String
+  apellido  String
+  empresa   String?
   phone     String?
   avatar    String?
-  role      Role     @default(LANDLORD)
+  role      Role     @default(USER)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  refreshTokens RefreshToken[]
   properties    Property[]
   notifications Notification[]
 
   @@map("users")
+}
+
+model RefreshToken {
+  id          String   @id @default(cuid())
+  hashedToken String   @unique @db.Char(64)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime
+  revoked     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
 }
 
 model Property {
@@ -102,8 +116,8 @@ model Property {
   bathrooms   Int            @default(1)
   area        Float
   monthlyRent Decimal        @db.Decimal(10, 2)
-  images      String[]
-  amenities   String[]
+  images      Json           @default("[]")
+  amenities   Json           @default("[]")
   isActive    Boolean        @default(true)
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
@@ -121,19 +135,19 @@ model Property {
 }
 
 model Tenant {
-  id             String   @id @default(cuid())
-  email          String   @unique
-  firstName      String
-  lastName       String
-  phone          String
-  dni            String   @unique
-  occupation     String?
-  monthlyIncome  Decimal? @db.Decimal(10, 2)
+  id               String   @id @default(cuid())
+  email            String   @unique
+  firstName        String
+  lastName         String
+  phone            String
+  dni              String   @unique
+  occupation       String?
+  monthlyIncome    Decimal? @db.Decimal(10, 2)
   emergencyContact String?
-  notes          String?
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  notes            String?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   contracts Contract[]
 
@@ -147,7 +161,7 @@ model Contract {
   monthlyRent Decimal        @db.Decimal(10, 2)
   deposit     Decimal        @db.Decimal(10, 2)
   status      ContractStatus @default(PENDING)
-  terms       String?
+  terms       String?        @db.Text
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
@@ -189,7 +203,7 @@ model Payment {
 model MaintenanceTicket {
   id          String              @id @default(cuid())
   title       String
-  description String
+  description String              @db.Text
   status      MaintenanceStatus   @default(OPEN)
   priority    MaintenancePriority @default(MEDIUM)
   category    String?
@@ -210,7 +224,7 @@ model MaintenanceTicket {
 model Notification {
   id        String           @id @default(cuid())
   title     String
-  message   String
+  message   String           @db.Text
   type      NotificationType @default(GENERAL)
   isRead    Boolean          @default(false)
   metadata  Json?
