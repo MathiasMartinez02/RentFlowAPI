@@ -2,7 +2,9 @@ import { NestFactory, Reflector } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { IoAdapter } from '@nestjs/platform-socket.io';
+import { join } from 'path';
 import * as compression from 'compression';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
@@ -11,7 +13,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
 
   const port = configService.get<number>('app.port', 3000);
@@ -20,6 +22,9 @@ async function bootstrap() {
 
   // WebSocket adapter
   app.useWebSocketAdapter(new IoAdapter(app));
+
+  // Static file serving for uploads
+  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads' });
 
   // Security middleware
   app.use(helmet());
@@ -76,6 +81,7 @@ async function bootstrap() {
       .addTag('Maintenance', 'Maintenance ticket system')
       .addTag('Notificaciones', 'In-app notifications')
       .addTag('Activity Feed', 'User activity log')
+      .addTag('Uploads', 'File and image uploads')
       .addTag('Dashboard', 'Analytics & KPIs')
       .addTag('Health', 'Service health checks')
       .build();

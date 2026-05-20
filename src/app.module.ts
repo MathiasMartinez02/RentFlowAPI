@@ -13,6 +13,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { HealthModule } from './modules/health/health.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { PropertiesModule } from './modules/properties/properties.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
@@ -36,6 +37,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     PaymentsModule,
     MaintenanceModule,
     NotificationsModule,
+    UploadsModule,
     DashboardModule,
     HealthModule,
   ],

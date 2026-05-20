@@ -166,6 +166,7 @@ model Property {
   maintenanceTickets MaintenanceTicket[]
   tenants            Tenant[]
   payments           Payment[]
+  images             PropertyImage[]
 
   @@index([ownerId])
   @@index([estado])
@@ -312,6 +313,21 @@ model MaintenanceTicket {
   @@index([prioridad])
   @@index([categoria])
   @@map("maintenance_tickets")
+}
+
+model PropertyImage {
+  id         String   @id @default(cuid())
+  url        String
+  filename   String
+  mimeType   String
+  size       Int
+  createdAt  DateTime @default(now())
+
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@map("property_images")
 }
 
 model Notification {

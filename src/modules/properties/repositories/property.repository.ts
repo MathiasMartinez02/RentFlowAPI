@@ -32,6 +32,7 @@ export class PropertyRepository {
       where: { id, ownerId, isActive: true },
       include: {
         owner: { select: { id: true, nombre: true, apellido: true, email: true } },
+        images: { orderBy: { createdAt: 'desc' } },
         _count: { select: { contracts: true, maintenanceTickets: true } },
       },
     });
