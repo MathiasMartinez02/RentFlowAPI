@@ -36,10 +36,11 @@ enum TenantStatus {
 }
 
 enum ContractStatus {
-  PENDING
-  ACTIVE
-  EXPIRED
-  TERMINATED
+  ACTIVO
+  PROXIMO_A_VENCER
+  VENCIDO
+  CANCELADO
+  RENOVADO
 }
 
 enum PaymentStatus {
@@ -91,6 +92,7 @@ model User {
   refreshTokens RefreshToken[]
   properties    Property[]
   tenants       Tenant[]
+  contracts     Contract[]
   notifications Notification[]
 
   @@map("users")
@@ -177,15 +179,22 @@ model Tenant {
 }
 
 model Contract {
-  id          String         @id @default(cuid())
-  startDate   DateTime
-  endDate     DateTime
-  monthlyRent Decimal        @db.Decimal(10, 2)
-  deposit     Decimal        @db.Decimal(10, 2)
-  status      ContractStatus @default(PENDING)
-  terms       String?        @db.Text
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id                   String         @id @default(cuid())
+  codigoContrato       String         @unique
+  fechaInicio          DateTime
+  fechaFin             DateTime
+  montoMensual         Decimal        @db.Decimal(10, 2)
+  deposito             Decimal        @db.Decimal(10, 2)
+  expensas             Decimal?       @db.Decimal(10, 2)
+  renovacionAutomatica Boolean        @default(false)
+  estado               ContractStatus @default(ACTIVO)
+  observaciones        String?        @db.Text
+  isActive             Boolean        @default(true)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   propertyId String
   property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
@@ -195,9 +204,11 @@ model Contract {
 
   payments Payment[]
 
+  @@index([ownerId])
   @@index([propertyId])
   @@index([tenantId])
-  @@index([status])
+  @@index([estado])
+  @@index([fechaFin])
   @@map("contracts")
 }
 

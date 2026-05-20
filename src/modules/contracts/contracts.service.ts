@@ -1,91 +1,107 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { ContractStatus, PropertyStatus } from '@prisma/client';
-import { PrismaService } from '../../database/prisma.service';
-import { PaginationDto } from '../../common/dto/pagination.dto';
-import { buildPaginatedResult, getPaginationMeta } from '../../common/utils/pagination.util';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ContractRepository } from './repositories/contract.repository';
 import { CreateContractDto } from './dto/create-contract.dto';
+import { UpdateContractDto } from './dto/update-contract.dto';
+import { QueryContractsDto } from './dto/query-contracts.dto';
+import { ContractStatus } from '../../common/enums/contract.enum';
 
 @Injectable()
 export class ContractsService {
   private readonly logger = new Logger(ContractsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly contractRepository: ContractRepository) {}
 
-  async create(dto: CreateContractDto) {
-    const property = await this.prisma.property.findUnique({ where: { id: dto.propertyId } });
+  async create(ownerId: string, dto: CreateContractDto) {
+    if (new Date(dto.fechaFin) <= new Date(dto.fechaInicio)) {
+      throw new BadRequestException('La fecha de fin debe ser posterior a la fecha de inicio');
+    }
+
+    const [property, tenant] = await Promise.all([
+      this.contractRepository.findPropertyByOwner(dto.propertyId, ownerId),
+      this.contractRepository.findTenantByOwner(dto.tenantId, ownerId),
+    ]);
+
     if (!property) throw new NotFoundException('Propiedad no encontrada');
-    if (property.estado !== PropertyStatus.DISPONIBLE) {
-      throw new BadRequestException('La propiedad no está disponible para alquilar');
+    if (!tenant) throw new NotFoundException('Inquilino no encontrado');
+
+    const isActivo = !dto.estado || dto.estado === ContractStatus.ACTIVO;
+    if (isActivo) {
+      const activeContracts = await this.contractRepository.countActiveByProperty(dto.propertyId);
+      if (activeContracts > 0) {
+        throw new ConflictException('La propiedad ya tiene un contrato activo');
+      }
     }
 
-    const tenant = await this.prisma.tenant.findUnique({ where: { id: dto.tenantId } });
-    if (!tenant || !tenant.isActive) throw new NotFoundException('Inquilino no encontrado');
+    const codigoContrato = await this.generateUniqueCode();
+    const contract = await this.contractRepository.create(ownerId, dto, codigoContrato);
 
-    const [contract] = await this.prisma.$transaction([
-      this.prisma.contract.create({ data: dto }),
-      this.prisma.property.update({
-        where: { id: dto.propertyId },
-        data: { estado: PropertyStatus.OCUPADA },
-      }),
-    ]);
-
-    this.logger.log(`Contrato creado: ${contract.id}`);
-    return { message: 'Contrato creado correctamente', data: contract };
+    this.logger.log(`Contrato creado: ${contract.id} (${codigoContrato}) por usuario ${ownerId}`);
+    return contract;
   }
 
-  async findAll(pagination: PaginationDto) {
-    const { skip, take, page, limit } = getPaginationMeta(pagination);
-
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.contract.findMany({
-        skip,
-        take,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          property: { select: { id: true, nombre: true, direccion: true } },
-          tenant: { select: { id: true, nombre: true, apellido: true, email: true } },
-        },
-      }),
-      this.prisma.contract.count(),
-    ]);
-
-    return {
-      message: 'Contratos recuperados correctamente',
-      data: buildPaginatedResult(items, total, page, limit),
-    };
+  async findAll(ownerId: string, query: QueryContractsDto) {
+    return this.contractRepository.findMany(ownerId, query);
   }
 
-  async findOne(id: string) {
-    const contract = await this.prisma.contract.findUnique({
-      where: { id },
-      include: {
-        property: true,
-        tenant: true,
-        payments: { orderBy: { dueDate: 'asc' } },
-      },
-    });
+  async findOne(id: string, ownerId: string) {
+    const contract = await this.contractRepository.findById(id, ownerId);
     if (!contract) throw new NotFoundException(`Contrato ${id} no encontrado`);
-    return { message: 'Contrato recuperado correctamente', data: contract };
+    return contract;
   }
 
-  async terminate(id: string) {
-    const contract = await this.prisma.contract.findUnique({ where: { id } });
-    if (!contract) throw new NotFoundException(`Contrato ${id} no encontrado`);
-    if (contract.status === ContractStatus.TERMINATED) {
-      throw new BadRequestException('El contrato ya está terminado');
+  async update(id: string, ownerId: string, dto: UpdateContractDto) {
+    const contract = await this.findOne(id, ownerId);
+
+    if (contract.estado === ContractStatus.CANCELADO) {
+      throw new BadRequestException('No se puede modificar un contrato cancelado');
     }
 
-    await this.prisma.$transaction([
-      this.prisma.contract.update({
-        where: { id },
-        data: { status: ContractStatus.TERMINATED },
-      }),
-      this.prisma.property.update({
-        where: { id: contract.propertyId },
-        data: { estado: PropertyStatus.DISPONIBLE },
-      }),
-    ]);
+    if (dto.fechaInicio || dto.fechaFin) {
+      const inicio = dto.fechaInicio ? new Date(dto.fechaInicio) : contract.fechaInicio;
+      const fin = dto.fechaFin ? new Date(dto.fechaFin) : contract.fechaFin;
+      if (fin <= inicio) {
+        throw new BadRequestException('La fecha de fin debe ser posterior a la fecha de inicio');
+      }
+    }
 
-    return { message: 'Contrato terminado correctamente', data: null };
+    if (dto.propertyId && dto.propertyId !== contract.propertyId) {
+      const property = await this.contractRepository.findPropertyByOwner(dto.propertyId, ownerId);
+      if (!property) throw new NotFoundException('Propiedad no encontrada');
+    }
+
+    if (dto.tenantId && dto.tenantId !== contract.tenantId) {
+      const tenant = await this.contractRepository.findTenantByOwner(dto.tenantId, ownerId);
+      if (!tenant) throw new NotFoundException('Inquilino no encontrado');
+    }
+
+    return this.contractRepository.update(id, dto);
+  }
+
+  async remove(id: string, ownerId: string) {
+    const contract = await this.findOne(id, ownerId);
+
+    if (contract.estado === ContractStatus.CANCELADO) {
+      throw new BadRequestException('El contrato ya está cancelado');
+    }
+
+    await this.contractRepository.cancel(id, contract.propertyId);
+    this.logger.log(`Contrato cancelado: ${id} por usuario ${ownerId}`);
+  }
+
+  private async generateUniqueCode(): Promise<string> {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code: string;
+    let exists = true;
+
+    while (exists) {
+      const random = Array.from(
+        { length: 5 },
+        () => chars[Math.floor(Math.random() * chars.length)],
+      ).join('');
+      code = `CTR-${new Date().getFullYear()}-${random}`;
+      exists = await this.contractRepository.codeExists(code);
+    }
+
+    return code!;
   }
 }

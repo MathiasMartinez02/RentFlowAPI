@@ -23,17 +23,17 @@ export class DashboardService {
       this.prisma.property.count({ where: { ownerId, estado: PropertyStatus.DISPONIBLE } }),
       this.prisma.property.count({ where: { ownerId, estado: PropertyStatus.OCUPADA } }),
       this.prisma.contract.count({
-        where: { property: { ownerId }, status: ContractStatus.ACTIVE },
+        where: { ownerId, isActive: true, estado: ContractStatus.ACTIVO },
       }),
       this.prisma.payment.count({
         where: {
-          contract: { property: { ownerId } },
+          contract: { ownerId },
           status: PaymentStatus.PENDING,
         },
       }),
       this.prisma.payment.count({
         where: {
-          contract: { property: { ownerId } },
+          contract: { ownerId },
           status: PaymentStatus.OVERDUE,
         },
       }),
@@ -46,7 +46,7 @@ export class DashboardService {
       this.prisma.payment.aggregate({
         _sum: { amount: true },
         where: {
-          contract: { property: { ownerId } },
+          contract: { ownerId },
           status: PaymentStatus.PAID,
           paidDate: {
             gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
@@ -75,9 +75,11 @@ export class DashboardService {
   }
 
   async getRecentActivity(ownerId: string) {
+    const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
     const [recentPayments, recentTickets, expiringContracts] = await this.prisma.$transaction([
       this.prisma.payment.findMany({
-        where: { contract: { property: { ownerId } } },
+        where: { contract: { ownerId } },
         orderBy: { createdAt: 'desc' },
         take: 5,
         include: {
@@ -97,15 +99,16 @@ export class DashboardService {
       }),
       this.prisma.contract.findMany({
         where: {
-          property: { ownerId },
-          status: ContractStatus.ACTIVE,
-          endDate: { lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
+          ownerId,
+          isActive: true,
+          estado: ContractStatus.ACTIVO,
+          fechaFin: { lte: thirtyDaysFromNow },
         },
         include: {
           tenant: { select: { nombre: true, apellido: true, email: true } },
           property: { select: { nombre: true } },
         },
-        orderBy: { endDate: 'asc' },
+        orderBy: { fechaFin: 'asc' },
         take: 5,
       }),
     ]);
