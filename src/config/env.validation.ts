@@ -16,6 +16,7 @@ export const envValidationSchema = Joi.object({
   LOG_LEVEL: Joi.string()
     .valid('error', 'warn', 'info', 'debug', 'verbose')
     .default('debug'),
+  FRONTEND_URL: Joi.string().optional().default('*'),
 
   MYSQL_ROOT_PASSWORD: Joi.string().optional(),
   MYSQL_USER: Joi.string().optional(),

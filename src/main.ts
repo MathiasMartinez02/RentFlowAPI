@@ -19,6 +19,7 @@ async function bootstrap() {
   const port = configService.get<number>('app.port', 3000);
   const nodeEnv = configService.get<string>('app.nodeEnv', 'development');
   const swaggerEnabled = configService.get<boolean>('app.swaggerEnabled', true);
+  const frontendUrl = configService.get<string>('app.frontendUrl', '*');
 
   // WebSocket adapter
   app.useWebSocketAdapter(new IoAdapter(app));
@@ -32,7 +33,8 @@ async function bootstrap() {
 
   // CORS
   app.enableCors({
-    origin: '*',
+    origin: frontendUrl === '*' ? true : frontendUrl.split(',').map((u) => u.trim()),
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });

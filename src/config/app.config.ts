@@ -5,4 +5,5 @@ export default registerAs('app', () => ({
   port: parseInt(process.env.PORT || '3000', 10),
   swaggerEnabled: process.env.SWAGGER_ENABLED !== 'false',
   logLevel: process.env.LOG_LEVEL || 'debug',
+  frontendUrl: process.env.FRONTEND_URL || '*',
 }));
