@@ -76,10 +76,11 @@ model User {
   empresa   String?
   phone     String?
   avatar    String?
-  role      Role     @default(USER)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  role        Role      @default(USER)
+  isActive    Boolean   @default(true)
+  ultimoLogin DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   refreshTokens RefreshToken[]
   properties    Property[]

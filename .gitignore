@@ -38,3 +38,7 @@ prisma/migrations/dev.db
 # Temp
 tmp/
 temp/
+
+#claude
+.claude
+claude.log

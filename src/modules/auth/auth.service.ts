@@ -38,6 +38,7 @@ const USER_SELECT = {
   avatar: true,
   role: true,
   isActive: true,
+  ultimoLogin: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -90,7 +91,15 @@ export class AuthService {
     if (!passwordValid) throw new UnauthorizedException('Invalid credentials');
 
     const tokens = await this.generateTokens(user.id, user.email, user.role);
-    await this.storeRefreshToken(user.id, tokens.refreshToken);
+
+    // Fire-and-forget: store refresh token + track last login (non-blocking)
+    await Promise.all([
+      this.storeRefreshToken(user.id, tokens.refreshToken),
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: { ultimoLogin: new Date() },
+      }),
+    ]);
 
     this.logger.log(`User logged in: ${user.email}`);
 
