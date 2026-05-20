@@ -26,7 +26,7 @@ import { RolesGuard } from './common/guards/roles.guard';
       isGlobal: true,
       load: [appConfig, databaseConfig, jwtConfig],
       validationSchema: envValidationSchema,
-      validationOptions: { allowUnknown: false, abortEarly: true },
+      validationOptions: { allowUnknown: true, abortEarly: true },
     }),
     DatabaseModule,
     AuthModule,

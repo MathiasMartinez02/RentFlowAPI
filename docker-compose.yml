@@ -11,7 +11,7 @@ services:
     ports:
       - '${PORT:-3000}:3000'
     environment:
-      DATABASE_URL: ${DATABASE_URL:-mysql://rentflow:rentflow_password@mysql:3306/rentflow}
+      DATABASE_URL: mysql://${MYSQL_USER:-rentflow}:${MYSQL_PASSWORD:-rentflow_password}@mysql:3306/${MYSQL_DB:-rentflow}
       JWT_SECRET: ${JWT_SECRET:-rentflow-super-secret-jwt-key-min-32-chars!!}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-rentflow-refresh-secret-jwt-key-32chars!}
       ACCESS_TOKEN_EXPIRES: ${ACCESS_TOKEN_EXPIRES:-15m}
@@ -26,6 +26,7 @@ services:
         condition: service_healthy
     volumes:
       - ./src:/app/src
+      - ./prisma:/app/prisma
       - uploads_data:/app/uploads
     command: npm run start:dev
     networks:

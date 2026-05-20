@@ -79,7 +79,7 @@ export class AuthService {
 
     return {
       message: 'Registration successful',
-      data: { user, tokens },
+      data: { ...tokens, user },
     };
   }
 
@@ -107,7 +107,7 @@ export class AuthService {
 
     return {
       message: 'Login successful',
-      data: { user: safeUser, tokens },
+      data: { ...tokens, user: safeUser },
     };
   }
 
@@ -147,7 +147,7 @@ export class AuthService {
 
     return {
       message: 'Tokens refreshed successfully',
-      data: { tokens },
+      data: { ...tokens },
     };
   }
 

@@ -27,7 +27,7 @@ import { PaginatedUsersResponseDto, UserResponseDto } from './dto/user-response.
 import { UserEntity } from './entities/user.entity';
 import { UsersService } from './users.service';
 
-@ApiTags('Users')
+@ApiTags('Usuarios')
 @ApiBearerAuth('JWT-auth')
 @ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
 @ApiExtraModels(UserEntity)

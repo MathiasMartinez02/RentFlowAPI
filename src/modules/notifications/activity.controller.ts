@@ -5,7 +5,7 @@ import { QueryActivityDto } from './dto/query-activity.dto';
 import { PaginatedActivityResponseDto } from './dto/notification-response.dto';
 import { ActivityService } from './activity.service';
 
-@ApiTags('Activity Feed')
+@ApiTags('Actividad')
 @ApiBearerAuth('JWT-auth')
 @Controller('activity')
 export class ActivityController {

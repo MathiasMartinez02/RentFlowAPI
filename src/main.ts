@@ -74,18 +74,18 @@ async function bootstrap() {
         { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', in: 'header' },
         'JWT-auth',
       )
-      .addTag('Auth', 'Authentication — register & login')
-      .addTag('Users', 'User profile management')
-      .addTag('Properties', 'Property CRUD')
-      .addTag('Tenants', 'Tenant management')
-      .addTag('Contracts', 'Rental contract management')
-      .addTag('Payments', 'Payment tracking')
-      .addTag('Maintenance', 'Maintenance ticket system')
-      .addTag('Notificaciones', 'In-app notifications')
-      .addTag('Activity Feed', 'User activity log')
-      .addTag('Uploads', 'File and image uploads')
-      .addTag('Dashboard', 'Analytics & KPIs')
-      .addTag('Health', 'Service health checks')
+      .addTag('Auth', 'Registro e inicio de sesión')
+      .addTag('Usuarios', 'Perfil y gestión de usuarios')
+      .addTag('Propiedades', 'ABM de propiedades')
+      .addTag('Inquilinos', 'Gestión de inquilinos')
+      .addTag('Contratos', 'Gestión de contratos de alquiler')
+      .addTag('Pagos', 'Seguimiento de pagos')
+      .addTag('Mantenimiento', 'Sistema de tickets de mantenimiento')
+      .addTag('Notificaciones', 'Notificaciones in-app')
+      .addTag('Actividad', 'Log de actividad del usuario')
+      .addTag('Uploads', 'Subida de archivos e imágenes')
+      .addTag('Dashboard', 'Analytics y KPIs')
+      .addTag('Health', 'Estado del servicio')
       .build();
 
     const document = SwaggerModule.createDocument(app, config);
