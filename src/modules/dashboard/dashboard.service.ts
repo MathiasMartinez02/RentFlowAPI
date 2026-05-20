@@ -26,16 +26,10 @@ export class DashboardService {
         where: { ownerId, isActive: true, estado: ContractStatus.ACTIVO },
       }),
       this.prisma.payment.count({
-        where: {
-          contract: { ownerId },
-          status: PaymentStatus.PENDING,
-        },
+        where: { ownerId, isActive: true, estado: PaymentStatus.PENDIENTE },
       }),
       this.prisma.payment.count({
-        where: {
-          contract: { ownerId },
-          status: PaymentStatus.OVERDUE,
-        },
+        where: { ownerId, isActive: true, estado: PaymentStatus.VENCIDO },
       }),
       this.prisma.maintenanceTicket.count({
         where: {
@@ -44,11 +38,12 @@ export class DashboardService {
         },
       }),
       this.prisma.payment.aggregate({
-        _sum: { amount: true },
+        _sum: { monto: true },
         where: {
-          contract: { ownerId },
-          status: PaymentStatus.PAID,
-          paidDate: {
+          ownerId,
+          isActive: true,
+          estado: PaymentStatus.PAGADO,
+          fechaPago: {
             gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
           },
         },
@@ -67,7 +62,7 @@ export class DashboardService {
         payments: {
           pending: pendingPayments,
           overdue: overduePayments,
-          monthlyRevenue: monthlyRevenue._sum.amount ?? 0,
+          monthlyRevenue: Number(monthlyRevenue._sum.monto ?? 0),
         },
         maintenance: { open: openTickets },
       },
@@ -79,7 +74,7 @@ export class DashboardService {
 
     const [recentPayments, recentTickets, expiringContracts] = await this.prisma.$transaction([
       this.prisma.payment.findMany({
-        where: { contract: { ownerId } },
+        where: { ownerId, isActive: true },
         orderBy: { createdAt: 'desc' },
         take: 5,
         include: {

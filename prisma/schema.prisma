@@ -44,10 +44,18 @@ enum ContractStatus {
 }
 
 enum PaymentStatus {
-  PENDING
-  PAID
-  OVERDUE
-  CANCELLED
+  PENDIENTE
+  PAGADO
+  VENCIDO
+  PARCIAL
+  CANCELADO
+}
+
+enum PaymentMethod {
+  TRANSFERENCIA
+  EFECTIVO
+  TARJETA
+  DEBITO_AUTOMATICO
 }
 
 enum MaintenanceStatus {
@@ -93,6 +101,7 @@ model User {
   properties    Property[]
   tenants       Tenant[]
   contracts     Contract[]
+  payments      Payment[]
   notifications Notification[]
 
   @@map("users")
@@ -138,6 +147,7 @@ model Property {
   contracts          Contract[]
   maintenanceTickets MaintenanceTicket[]
   tenants            Tenant[]
+  payments           Payment[]
 
   @@index([ownerId])
   @@index([estado])
@@ -169,6 +179,7 @@ model Tenant {
   property   Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
 
   contracts Contract[]
+  payments  Payment[]
 
   @@unique([email, ownerId])
   @@unique([dni, ownerId])
@@ -213,23 +224,40 @@ model Contract {
 }
 
 model Payment {
-  id         String        @id @default(cuid())
-  amount     Decimal       @db.Decimal(10, 2)
-  dueDate    DateTime
-  paidDate   DateTime?
-  status     PaymentStatus @default(PENDING)
-  method     String?
-  reference  String?
-  notes      String?
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  id              String         @id @default(cuid())
+  periodo         String
+  fechaVencimiento DateTime
+  fechaPago       DateTime?
+  monto           Decimal        @db.Decimal(10, 2)
+  mora            Decimal?       @db.Decimal(10, 2)
+  totalPagado     Decimal?       @db.Decimal(10, 2)
+  metodoPago      PaymentMethod?
+  referenciaPago  String?
+  estado          PaymentStatus  @default(PENDIENTE)
+  observaciones   String?        @db.Text
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   contractId String
   contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
 
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([contractId, periodo])
+  @@index([ownerId])
   @@index([contractId])
-  @@index([status])
-  @@index([dueDate])
+  @@index([tenantId])
+  @@index([propertyId])
+  @@index([estado])
+  @@index([fechaVencimiento])
   @@map("payments")
 }
 

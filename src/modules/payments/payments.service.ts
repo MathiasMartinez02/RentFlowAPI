@@ -1,101 +1,126 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { PaymentStatus } from '@prisma/client';
-import { PrismaService } from '../../database/prisma.service';
-import { PaginationDto } from '../../common/dto/pagination.dto';
-import { buildPaginatedResult, getPaginationMeta } from '../../common/utils/pagination.util';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PaymentRepository } from './repositories/payment.repository';
 import { CreatePaymentDto } from './dto/create-payment.dto';
+import { UpdatePaymentDto } from './dto/update-payment.dto';
+import { QueryPaymentsDto } from './dto/query-payments.dto';
+import { PaymentStatus } from '../../common/enums/payment.enum';
 
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly paymentRepository: PaymentRepository) {}
 
-  async create(dto: CreatePaymentDto) {
-    const contract = await this.prisma.contract.findUnique({ where: { id: dto.contractId } });
-    if (!contract) throw new NotFoundException('Contract not found');
+  async create(ownerId: string, dto: CreatePaymentDto) {
+    const contract = await this.paymentRepository.findContractByOwner(dto.contractId, ownerId);
+    if (!contract) throw new NotFoundException('Contrato no encontrado');
 
-    const payment = await this.prisma.payment.create({
-      data: {
-        ...dto,
-        status: dto.paidDate ? PaymentStatus.PAID : PaymentStatus.PENDING,
-      },
-    });
-    this.logger.log(`Payment created: ${payment.id}`);
-    return { message: 'Payment created successfully', data: payment };
+    const duplicate = await this.paymentRepository.existsByContractAndPeriodo(
+      dto.contractId,
+      dto.periodo,
+    );
+    if (duplicate) {
+      throw new ConflictException(
+        `Ya existe un pago para el contrato ${dto.contractId} en el período ${dto.periodo}`,
+      );
+    }
+
+    const estado = dto.estado ?? PaymentStatus.PENDIENTE;
+
+    if (estado === PaymentStatus.PAGADO && !dto.fechaPago) {
+      throw new BadRequestException('fechaPago es obligatoria cuando el estado es PAGADO');
+    }
+
+    const resolvedDto = { ...dto, estado };
+    if (estado === PaymentStatus.PAGADO && resolvedDto.totalPagado === undefined) {
+      resolvedDto.totalPagado = Number(dto.monto) + Number(dto.mora ?? 0);
+    }
+
+    const payment = await this.paymentRepository.create(
+      ownerId,
+      contract.tenantId,
+      contract.propertyId,
+      resolvedDto,
+    );
+
+    this.logger.log(`Pago creado: ${payment.id} (período ${dto.periodo}) por usuario ${ownerId}`);
+    return payment;
   }
 
-  async findAll(pagination: PaginationDto) {
-    const { skip, take, page, limit } = getPaginationMeta(pagination);
-
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.payment.findMany({
-        skip,
-        take,
-        orderBy: { dueDate: 'desc' },
-        include: {
-          contract: {
-            select: {
-              id: true,
-              property: { select: { nombre: true } },
-              tenant: { select: { nombre: true, apellido: true } },
-            },
-          },
-        },
-      }),
-      this.prisma.payment.count(),
-    ]);
-
-    return {
-      message: 'Payments retrieved successfully',
-      data: buildPaginatedResult(items, total, page, limit),
-    };
+  async findAll(ownerId: string, query: QueryPaymentsDto) {
+    return this.paymentRepository.findMany(ownerId, query);
   }
 
-  async findByContract(contractId: string) {
-    const payments = await this.prisma.payment.findMany({
-      where: { contractId },
-      orderBy: { dueDate: 'asc' },
-    });
-    return { message: 'Payments retrieved successfully', data: payments };
+  async findOne(id: string, ownerId: string) {
+    const payment = await this.paymentRepository.findById(id, ownerId);
+    if (!payment) throw new NotFoundException(`Pago ${id} no encontrado`);
+    return payment;
   }
 
-  async markAsPaid(id: string, method?: string, reference?: string) {
-    const payment = await this.prisma.payment.findUnique({ where: { id } });
-    if (!payment) throw new NotFoundException(`Payment ${id} not found`);
+  async update(id: string, ownerId: string, dto: UpdatePaymentDto) {
+    const payment = await this.findOne(id, ownerId);
 
-    const updated = await this.prisma.payment.update({
-      where: { id },
-      data: {
-        status: PaymentStatus.PAID,
-        paidDate: new Date(),
-        ...(method && { method }),
-        ...(reference && { reference }),
-      },
-    });
-    return { message: 'Payment marked as paid', data: updated };
+    if (payment.estado === PaymentStatus.CANCELADO) {
+      throw new BadRequestException('No se puede modificar un pago cancelado');
+    }
+
+    const nuevoEstado = dto.estado ?? (payment.estado as PaymentStatus);
+
+    if (nuevoEstado === PaymentStatus.PAGADO) {
+      const tieneFechaPago = dto.fechaPago ?? payment.fechaPago;
+      if (!tieneFechaPago) {
+        throw new BadRequestException('fechaPago es obligatoria cuando el estado es PAGADO');
+      }
+    }
+
+    const data: Prisma.PaymentUpdateInput = {};
+
+    if (dto.fechaVencimiento !== undefined) data.fechaVencimiento = new Date(dto.fechaVencimiento);
+    if (dto.fechaPago !== undefined) data.fechaPago = new Date(dto.fechaPago);
+    if (dto.monto !== undefined) data.monto = dto.monto;
+    if (dto.mora !== undefined) data.mora = dto.mora;
+    if (dto.totalPagado !== undefined) {
+      data.totalPagado = dto.totalPagado;
+    } else if (nuevoEstado === PaymentStatus.PAGADO && !payment.totalPagado) {
+      const monto = dto.monto ?? Number(payment.monto);
+      const mora = dto.mora ?? Number(payment.mora ?? 0);
+      data.totalPagado = monto + mora;
+    }
+    if (dto.metodoPago !== undefined) data.metodoPago = dto.metodoPago as any;
+    if (dto.referenciaPago !== undefined) data.referenciaPago = dto.referenciaPago;
+    if (dto.estado !== undefined) {
+      data.estado = dto.estado as any;
+      if (dto.estado === PaymentStatus.VENCIDO && dto.mora === undefined && !payment.mora) {
+        data.mora = this.calculateMora(Number(payment.monto), payment.fechaVencimiento as Date);
+      }
+    }
+    if (dto.observaciones !== undefined) data.observaciones = dto.observaciones;
+
+    return this.paymentRepository.update(id, data);
   }
 
-  async findOverdue() {
-    const today = new Date();
-    const payments = await this.prisma.payment.findMany({
-      where: { status: PaymentStatus.PENDING, dueDate: { lt: today } },
-      include: {
-        contract: {
-          select: {
-            tenant: { select: { nombre: true, apellido: true, email: true, telefono: true } },
-            property: { select: { nombre: true, direccion: true } },
-          },
-        },
-      },
-      orderBy: { dueDate: 'asc' },
-    });
+  async remove(id: string, ownerId: string) {
+    const payment = await this.findOne(id, ownerId);
 
-    await this.prisma.payment.updateMany({
-      where: { status: PaymentStatus.PENDING, dueDate: { lt: today } },
-      data: { status: PaymentStatus.OVERDUE },
-    });
+    if (payment.estado === PaymentStatus.CANCELADO) {
+      throw new BadRequestException('El pago ya está cancelado');
+    }
 
-    return { message: 'Overdue payments retrieved', data: payments };
+    await this.paymentRepository.softDelete(id);
+    this.logger.log(`Pago cancelado: ${id} por usuario ${ownerId}`);
+  }
+
+  async getOverview(ownerId: string) {
+    return this.paymentRepository.getOverviewStats(ownerId);
+  }
+
+  private calculateMora(monto: number, fechaVencimiento: Date): number {
+    const daysOverdue = Math.max(
+      0,
+      Math.floor((Date.now() - fechaVencimiento.getTime()) / (1000 * 60 * 60 * 24)),
+    );
+    const rate = Math.min(daysOverdue * 0.001, 0.3); // 0.1% diario, máximo 30%
+    return Number((monto * rate).toFixed(2));
   }
 }
