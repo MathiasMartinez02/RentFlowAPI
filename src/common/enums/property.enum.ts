@@ -1,0 +1,14 @@
+export enum PropertyStatus {
+  AVAILABLE = 'AVAILABLE',
+  RENTED = 'RENTED',
+  MAINTENANCE = 'MAINTENANCE',
+  INACTIVE = 'INACTIVE',
+}
+
+export enum PropertyType {
+  APARTMENT = 'APARTMENT',
+  HOUSE = 'HOUSE',
+  COMMERCIAL = 'COMMERCIAL',
+  STUDIO = 'STUDIO',
+  ROOM = 'ROOM',
+}

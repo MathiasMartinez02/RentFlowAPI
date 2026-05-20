@@ -1,0 +1,225 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  LANDLORD
+  TENANT
+}
+
+enum PropertyStatus {
+  AVAILABLE
+  RENTED
+  MAINTENANCE
+  INACTIVE
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  COMMERCIAL
+  STUDIO
+  ROOM
+}
+
+enum ContractStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  TERMINATED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum MaintenanceStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum MaintenancePriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum NotificationType {
+  PAYMENT_DUE
+  PAYMENT_RECEIVED
+  CONTRACT_EXPIRING
+  MAINTENANCE_UPDATE
+  GENERAL
+}
+
+// ─── Models ───────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  phone     String?
+  avatar    String?
+  role      Role     @default(LANDLORD)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  properties    Property[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Property {
+  id          String         @id @default(cuid())
+  title       String
+  description String?
+  address     String
+  city        String
+  state       String
+  zipCode     String
+  country     String         @default("Argentina")
+  type        PropertyType   @default(APARTMENT)
+  status      PropertyStatus @default(AVAILABLE)
+  bedrooms    Int            @default(1)
+  bathrooms   Int            @default(1)
+  area        Float
+  monthlyRent Decimal        @db.Decimal(10, 2)
+  images      String[]
+  amenities   String[]
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  contracts          Contract[]
+  maintenanceTickets MaintenanceTicket[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([city])
+  @@map("properties")
+}
+
+model Tenant {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  firstName      String
+  lastName       String
+  phone          String
+  dni            String   @unique
+  occupation     String?
+  monthlyIncome  Decimal? @db.Decimal(10, 2)
+  emergencyContact String?
+  notes          String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  contracts Contract[]
+
+  @@map("tenants")
+}
+
+model Contract {
+  id          String         @id @default(cuid())
+  startDate   DateTime
+  endDate     DateTime
+  monthlyRent Decimal        @db.Decimal(10, 2)
+  deposit     Decimal        @db.Decimal(10, 2)
+  status      ContractStatus @default(PENDING)
+  terms       String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  payments Payment[]
+
+  @@index([propertyId])
+  @@index([tenantId])
+  @@index([status])
+  @@map("contracts")
+}
+
+model Payment {
+  id         String        @id @default(cuid())
+  amount     Decimal       @db.Decimal(10, 2)
+  dueDate    DateTime
+  paidDate   DateTime?
+  status     PaymentStatus @default(PENDING)
+  method     String?
+  reference  String?
+  notes      String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("payments")
+}
+
+model MaintenanceTicket {
+  id          String              @id @default(cuid())
+  title       String
+  description String
+  status      MaintenanceStatus   @default(OPEN)
+  priority    MaintenancePriority @default(MEDIUM)
+  category    String?
+  resolvedAt  DateTime?
+  notes       String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([status])
+  @@index([priority])
+  @@map("maintenance_tickets")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  title     String
+  message   String
+  type      NotificationType @default(GENERAL)
+  isRead    Boolean          @default(false)
+  metadata  Json?
+  createdAt DateTime         @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@map("notifications")
+}
