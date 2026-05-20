@@ -28,7 +28,7 @@ export class MaintenanceService {
         skip,
         take,
         orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
-        include: { property: { select: { id: true, title: true, address: true } } },
+        include: { property: { select: { id: true, nombre: true, direccion: true } } },
       }),
       this.prisma.maintenanceTicket.count(),
     ]);

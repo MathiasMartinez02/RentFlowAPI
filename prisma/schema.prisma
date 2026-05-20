@@ -15,18 +15,17 @@ enum Role {
 }
 
 enum PropertyStatus {
-  AVAILABLE
-  RENTED
-  MAINTENANCE
-  INACTIVE
+  DISPONIBLE
+  OCUPADA
+  MANTENIMIENTO
 }
 
 enum PropertyType {
-  APARTMENT
-  HOUSE
-  COMMERCIAL
-  STUDIO
-  ROOM
+  APARTAMENTO
+  DUPLEX
+  CASA
+  OFICINA
+  LOCAL
 }
 
 enum ContractStatus {
@@ -103,25 +102,25 @@ model RefreshToken {
 }
 
 model Property {
-  id          String         @id @default(cuid())
-  title       String
-  description String?
-  address     String
-  city        String
-  state       String
-  zipCode     String
-  country     String         @default("Argentina")
-  type        PropertyType   @default(APARTMENT)
-  status      PropertyStatus @default(AVAILABLE)
-  bedrooms    Int            @default(1)
-  bathrooms   Int            @default(1)
-  area        Float
-  monthlyRent Decimal        @db.Decimal(10, 2)
-  images      Json           @default("[]")
-  amenities   Json           @default("[]")
-  isActive    Boolean        @default(true)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id              String         @id @default(cuid())
+  nombre          String
+  descripcion     String?        @db.Text
+  direccion       String
+  ciudad          String
+  provincia       String
+  codigoPostal    String
+  pais            String         @default("Argentina")
+  tipoPropiedad   PropertyType   @default(APARTAMENTO)
+  estado          PropertyStatus @default(DISPONIBLE)
+  precioMensual   Decimal        @db.Decimal(10, 2)
+  expensas        Decimal?       @db.Decimal(10, 2)
+  habitaciones    Int            @default(1)
+  banos           Int            @default(1)
+  metrosCuadrados Float
+  imagenPrincipal String?
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   ownerId String
   owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
@@ -130,8 +129,10 @@ model Property {
   maintenanceTickets MaintenanceTicket[]
 
   @@index([ownerId])
-  @@index([status])
-  @@index([city])
+  @@index([estado])
+  @@index([ciudad])
+  @@index([tipoPropiedad])
+  @@index([precioMensual])
   @@map("properties")
 }
 

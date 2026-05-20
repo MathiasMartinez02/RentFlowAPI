@@ -1,42 +1,51 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreatePropertyDto } from './dto/create-property.dto';
-import { FilterPropertyDto } from './dto/filter-property.dto';
+import { PaginatedPropertiesResponseDto, PropertyResponseDto } from './dto/property-response.dto';
+import { QueryPropertiesDto } from './dto/query-properties.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { PropertiesService } from './properties.service';
 
-@ApiTags('Properties')
+@ApiTags('Propiedades')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('properties')
 export class PropertiesController {
   constructor(private readonly propertiesService: PropertiesService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new property' })
-  @ApiResponse({ status: 201, description: 'Property created successfully' })
+  @ApiOperation({ summary: 'Crear una nueva propiedad' })
+  @ApiCreatedResponse({ type: PropertyResponseDto })
   create(@CurrentUser('id') ownerId: string, @Body() dto: CreatePropertyDto) {
     return this.propertiesService.create(ownerId, dto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all properties for current user' })
-  findAll(@CurrentUser('id') ownerId: string, @Query() filters: FilterPropertyDto) {
-    return this.propertiesService.findAll(ownerId, filters);
+  @ApiOperation({ summary: 'Listar propiedades con filtros, búsqueda y paginación' })
+  @ApiOkResponse({ type: PaginatedPropertiesResponseDto })
+  findAll(@CurrentUser('id') ownerId: string, @Query() query: QueryPropertiesDto) {
+    return this.propertiesService.findAll(ownerId, query);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get property by ID' })
-  @ApiResponse({ status: 404, description: 'Property not found' })
+  @ApiOperation({ summary: 'Obtener una propiedad por ID' })
+  @ApiOkResponse({ type: PropertyResponseDto })
+  @ApiNotFoundResponse({ description: 'Propiedad no encontrada' })
   findOne(@Param('id') id: string, @CurrentUser('id') ownerId: string) {
     return this.propertiesService.findOne(id, ownerId);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update property' })
+  @ApiOperation({ summary: 'Actualizar una propiedad' })
+  @ApiOkResponse({ type: PropertyResponseDto })
+  @ApiNotFoundResponse({ description: 'Propiedad no encontrada' })
   update(
     @Param('id') id: string,
     @CurrentUser('id') ownerId: string,
@@ -46,7 +55,9 @@ export class PropertiesController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete property (soft delete)' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Eliminar una propiedad (soft delete)' })
+  @ApiNotFoundResponse({ description: 'Propiedad no encontrada' })
   remove(@Param('id') id: string, @CurrentUser('id') ownerId: string) {
     return this.propertiesService.remove(id, ownerId);
   }

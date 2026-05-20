@@ -4,7 +4,8 @@
       "PowerShell(node --version)",
       "PowerShell(npm --version)",
       "PowerShell(npx @nestjs/cli --version 2>$null)",
-      "Read(//c/Users/mathias.martinez/Documents/Projects/RentFlow Back/**)"
+      "Read(//c/Users/mathias.martinez/Documents/Projects/RentFlow Back/**)",
+      "Bash(npx prisma *)"
     ]
   }
 }

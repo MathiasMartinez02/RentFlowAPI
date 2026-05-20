@@ -20,8 +20,8 @@ export class DashboardService {
       monthlyRevenue,
     ] = await this.prisma.$transaction([
       this.prisma.property.count({ where: { ownerId, isActive: true } }),
-      this.prisma.property.count({ where: { ownerId, status: PropertyStatus.AVAILABLE } }),
-      this.prisma.property.count({ where: { ownerId, status: PropertyStatus.RENTED } }),
+      this.prisma.property.count({ where: { ownerId, estado: PropertyStatus.DISPONIBLE } }),
+      this.prisma.property.count({ where: { ownerId, estado: PropertyStatus.OCUPADA } }),
       this.prisma.contract.count({
         where: { property: { ownerId }, status: ContractStatus.ACTIVE },
       }),
@@ -56,9 +56,13 @@ export class DashboardService {
     ]);
 
     return {
-      message: 'Dashboard stats retrieved successfully',
+      message: 'Estadísticas del dashboard recuperadas correctamente',
       data: {
-        properties: { total: totalProperties, available: availableProperties, rented: rentedProperties },
+        properties: {
+          total: totalProperties,
+          available: availableProperties,
+          rented: rentedProperties,
+        },
         contracts: { active: activeContracts },
         payments: {
           pending: pendingPayments,
@@ -80,7 +84,7 @@ export class DashboardService {
           contract: {
             select: {
               tenant: { select: { firstName: true, lastName: true } },
-              property: { select: { title: true } },
+              property: { select: { nombre: true } },
             },
           },
         },
@@ -89,7 +93,7 @@ export class DashboardService {
         where: { property: { ownerId }, status: { in: ['OPEN', 'IN_PROGRESS'] } },
         orderBy: { priority: 'desc' },
         take: 5,
-        include: { property: { select: { title: true } } },
+        include: { property: { select: { nombre: true } } },
       }),
       this.prisma.contract.findMany({
         where: {
@@ -99,7 +103,7 @@ export class DashboardService {
         },
         include: {
           tenant: { select: { firstName: true, lastName: true, email: true } },
-          property: { select: { title: true } },
+          property: { select: { nombre: true } },
         },
         orderBy: { endDate: 'asc' },
         take: 5,
@@ -107,7 +111,7 @@ export class DashboardService {
     ]);
 
     return {
-      message: 'Recent activity retrieved successfully',
+      message: 'Actividad reciente recuperada correctamente',
       data: { recentPayments, recentTickets, expiringContracts },
     };
   }

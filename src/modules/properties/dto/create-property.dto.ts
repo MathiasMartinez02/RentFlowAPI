@@ -1,81 +1,101 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
-  IsArray,
   IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsPositive,
   IsString,
+  IsUrl,
+  MaxLength,
   Min,
   MinLength,
 } from 'class-validator';
 import { PropertyType } from '../../../common/enums/property.enum';
 
 export class CreatePropertyDto {
-  @ApiProperty({ example: 'Modern apartment in Palermo' })
+  @ApiProperty({ example: 'Departamento en Palermo', minLength: 3, maxLength: 150 })
   @IsString()
   @MinLength(3)
-  title: string;
+  @MaxLength(150)
+  @Transform(({ value }) => value?.trim())
+  nombre: string;
 
-  @ApiPropertyOptional({ example: 'Spacious 2-bedroom apartment with pool access' })
+  @ApiPropertyOptional({ example: 'Luminoso 2 ambientes con balcón y amenities.' })
   @IsOptional()
   @IsString()
-  description?: string;
+  @MaxLength(2000)
+  @Transform(({ value }) => value?.trim())
+  descripcion?: string;
 
-  @ApiProperty({ example: 'Av. Santa Fe 1234, Piso 3A' })
+  @ApiProperty({ example: 'Av. Santa Fe 3250 Piso 4 B', maxLength: 200 })
   @IsString()
-  address: string;
+  @MinLength(5)
+  @MaxLength(200)
+  @Transform(({ value }) => value?.trim())
+  direccion: string;
 
-  @ApiProperty({ example: 'Buenos Aires' })
+  @ApiProperty({ example: 'Buenos Aires', maxLength: 100 })
   @IsString()
-  city: string;
+  @MinLength(2)
+  @MaxLength(100)
+  @Transform(({ value }) => value?.trim())
+  ciudad: string;
 
-  @ApiProperty({ example: 'CABA' })
+  @ApiProperty({ example: 'CABA', maxLength: 100 })
   @IsString()
-  state: string;
+  @MinLength(2)
+  @MaxLength(100)
+  @Transform(({ value }) => value?.trim())
+  provincia: string;
 
-  @ApiProperty({ example: 'C1425' })
+  @ApiProperty({ example: 'C1425BHH', maxLength: 20 })
   @IsString()
-  zipCode: string;
+  @MaxLength(20)
+  @Transform(({ value }) => value?.trim())
+  codigoPostal: string;
 
-  @ApiPropertyOptional({ example: 'Argentina', default: 'Argentina' })
+  @ApiPropertyOptional({ example: 'Argentina', default: 'Argentina', maxLength: 60 })
   @IsOptional()
   @IsString()
-  country?: string;
+  @MaxLength(60)
+  @Transform(({ value }) => value?.trim())
+  pais?: string;
 
-  @ApiProperty({ enum: PropertyType, example: PropertyType.APARTMENT })
+  @ApiProperty({ enum: PropertyType, example: PropertyType.APARTAMENTO })
   @IsEnum(PropertyType)
-  type: PropertyType;
+  tipoPropiedad: PropertyType;
 
-  @ApiProperty({ example: 2, minimum: 0 })
-  @IsNumber()
-  @Min(0)
-  bedrooms: number;
-
-  @ApiProperty({ example: 1, minimum: 0 })
-  @IsNumber()
-  @Min(0)
-  bathrooms: number;
-
-  @ApiProperty({ example: 65.5, description: 'Area in square meters' })
-  @IsNumber()
+  @ApiProperty({ example: 180000, description: 'Precio mensual en ARS', minimum: 1 })
+  @IsNumber({ maxDecimalPlaces: 2 })
   @IsPositive()
-  area: number;
+  precioMensual: number;
 
-  @ApiProperty({ example: 150000, description: 'Monthly rent in ARS' })
-  @IsNumber()
+  @ApiPropertyOptional({ example: 15000, description: 'Expensas mensuales en ARS', minimum: 0 })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  expensas?: number;
+
+  @ApiProperty({ example: 2, minimum: 0, maximum: 50 })
+  @IsInt()
+  @Min(0)
+  habitaciones: number;
+
+  @ApiProperty({ example: 1, minimum: 0, maximum: 20 })
+  @IsInt()
+  @Min(0)
+  banos: number;
+
+  @ApiProperty({ example: 65.5, description: 'Superficie en m²', minimum: 1 })
+  @IsNumber({ maxDecimalPlaces: 2 })
   @IsPositive()
-  monthlyRent: number;
+  metrosCuadrados: number;
 
-  @ApiPropertyOptional({ type: [String], example: ['https://...'] })
+  @ApiPropertyOptional({ example: 'https://cdn.example.com/prop-1.jpg' })
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  images?: string[];
-
-  @ApiPropertyOptional({ type: [String], example: ['WiFi', 'Parking', 'Pool'] })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  amenities?: string[];
+  @IsUrl({}, { message: 'imagenPrincipal debe ser una URL válida' })
+  @MaxLength(500)
+  imagenPrincipal?: string;
 }

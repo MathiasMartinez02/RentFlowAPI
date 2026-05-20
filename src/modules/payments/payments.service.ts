@@ -37,7 +37,7 @@ export class PaymentsService {
           contract: {
             select: {
               id: true,
-              property: { select: { title: true } },
+              property: { select: { nombre: true } },
               tenant: { select: { firstName: true, lastName: true } },
             },
           },
@@ -84,7 +84,7 @@ export class PaymentsService {
         contract: {
           select: {
             tenant: { select: { firstName: true, lastName: true, email: true, phone: true } },
-            property: { select: { title: true, address: true } },
+            property: { select: { nombre: true, direccion: true } },
           },
         },
       },

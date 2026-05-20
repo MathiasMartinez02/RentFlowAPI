@@ -13,24 +13,24 @@ export class ContractsService {
 
   async create(dto: CreateContractDto) {
     const property = await this.prisma.property.findUnique({ where: { id: dto.propertyId } });
-    if (!property) throw new NotFoundException('Property not found');
-    if (property.status !== PropertyStatus.AVAILABLE) {
-      throw new BadRequestException('Property is not available for rent');
+    if (!property) throw new NotFoundException('Propiedad no encontrada');
+    if (property.estado !== PropertyStatus.DISPONIBLE) {
+      throw new BadRequestException('La propiedad no está disponible para alquilar');
     }
 
     const tenant = await this.prisma.tenant.findUnique({ where: { id: dto.tenantId } });
-    if (!tenant || !tenant.isActive) throw new NotFoundException('Tenant not found');
+    if (!tenant || !tenant.isActive) throw new NotFoundException('Inquilino no encontrado');
 
     const [contract] = await this.prisma.$transaction([
       this.prisma.contract.create({ data: dto }),
       this.prisma.property.update({
         where: { id: dto.propertyId },
-        data: { status: PropertyStatus.RENTED },
+        data: { estado: PropertyStatus.OCUPADA },
       }),
     ]);
 
-    this.logger.log(`Contract created: ${contract.id}`);
-    return { message: 'Contract created successfully', data: contract };
+    this.logger.log(`Contrato creado: ${contract.id}`);
+    return { message: 'Contrato creado correctamente', data: contract };
   }
 
   async findAll(pagination: PaginationDto) {
@@ -42,7 +42,7 @@ export class ContractsService {
         take,
         orderBy: { createdAt: 'desc' },
         include: {
-          property: { select: { id: true, title: true, address: true } },
+          property: { select: { id: true, nombre: true, direccion: true } },
           tenant: { select: { id: true, firstName: true, lastName: true, email: true } },
         },
       }),
@@ -50,7 +50,7 @@ export class ContractsService {
     ]);
 
     return {
-      message: 'Contracts retrieved successfully',
+      message: 'Contratos recuperados correctamente',
       data: buildPaginatedResult(items, total, page, limit),
     };
   }
@@ -64,15 +64,15 @@ export class ContractsService {
         payments: { orderBy: { dueDate: 'asc' } },
       },
     });
-    if (!contract) throw new NotFoundException(`Contract ${id} not found`);
-    return { message: 'Contract retrieved successfully', data: contract };
+    if (!contract) throw new NotFoundException(`Contrato ${id} no encontrado`);
+    return { message: 'Contrato recuperado correctamente', data: contract };
   }
 
   async terminate(id: string) {
     const contract = await this.prisma.contract.findUnique({ where: { id } });
-    if (!contract) throw new NotFoundException(`Contract ${id} not found`);
+    if (!contract) throw new NotFoundException(`Contrato ${id} no encontrado`);
     if (contract.status === ContractStatus.TERMINATED) {
-      throw new BadRequestException('Contract is already terminated');
+      throw new BadRequestException('El contrato ya está terminado');
     }
 
     await this.prisma.$transaction([
@@ -82,10 +82,10 @@ export class ContractsService {
       }),
       this.prisma.property.update({
         where: { id: contract.propertyId },
-        data: { status: PropertyStatus.AVAILABLE },
+        data: { estado: PropertyStatus.DISPONIBLE },
       }),
     ]);
 
-    return { message: 'Contract terminated successfully', data: null };
+    return { message: 'Contrato terminado correctamente', data: null };
   }
 }
