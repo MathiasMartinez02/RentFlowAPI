@@ -2,6 +2,7 @@ import { NestFactory, Reflector } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 import * as compression from 'compression';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
@@ -16,6 +17,9 @@ async function bootstrap() {
   const port = configService.get<number>('app.port', 3000);
   const nodeEnv = configService.get<string>('app.nodeEnv', 'development');
   const swaggerEnabled = configService.get<boolean>('app.swaggerEnabled', true);
+
+  // WebSocket adapter
+  app.useWebSocketAdapter(new IoAdapter(app));
 
   // Security middleware
   app.use(helmet());
@@ -70,7 +74,8 @@ async function bootstrap() {
       .addTag('Contracts', 'Rental contract management')
       .addTag('Payments', 'Payment tracking')
       .addTag('Maintenance', 'Maintenance ticket system')
-      .addTag('Notifications', 'In-app notifications')
+      .addTag('Notificaciones', 'In-app notifications')
+      .addTag('Activity Feed', 'User activity log')
       .addTag('Dashboard', 'Analytics & KPIs')
       .addTag('Health', 'Service health checks')
       .build();

@@ -1,5 +1,13 @@
-import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { NotificationPriority, NotificationType } from '@prisma/client';
 import { ContractRepository } from './repositories/contract.repository';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateContractDto } from './dto/create-contract.dto';
 import { UpdateContractDto } from './dto/update-contract.dto';
 import { QueryContractsDto } from './dto/query-contracts.dto';
@@ -9,7 +17,10 @@ import { ContractStatus } from '../../common/enums/contract.enum';
 export class ContractsService {
   private readonly logger = new Logger(ContractsService.name);
 
-  constructor(private readonly contractRepository: ContractRepository) {}
+  constructor(
+    private readonly contractRepository: ContractRepository,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async create(ownerId: string, dto: CreateContractDto) {
     if (new Date(dto.fechaFin) <= new Date(dto.fechaInicio)) {
@@ -34,8 +45,22 @@ export class ContractsService {
 
     const codigoContrato = await this.generateUniqueCode();
     const contract = await this.contractRepository.create(ownerId, dto, codigoContrato);
-
     this.logger.log(`Contrato creado: ${contract.id} (${codigoContrato}) por usuario ${ownerId}`);
+
+    void this.notificationsService.notify(ownerId, {
+      titulo: 'Contrato creado',
+      mensaje: `Se creó el contrato ${codigoContrato}`,
+      tipo: NotificationType.CONTRACT,
+      prioridad: NotificationPriority.MEDIUM,
+      metadata: { contractId: contract.id, codigoContrato },
+    });
+    void this.notificationsService.logActivity(ownerId, {
+      action: 'CONTRACT_CREATED',
+      entityType: 'Contract',
+      entityId: contract.id,
+      descripcion: `Contrato ${codigoContrato} creado`,
+    });
+
     return contract;
   }
 
@@ -74,7 +99,19 @@ export class ContractsService {
       if (!tenant) throw new NotFoundException('Inquilino no encontrado');
     }
 
-    return this.contractRepository.update(id, dto);
+    const updated = await this.contractRepository.update(id, dto);
+
+    if (dto.estado === ContractStatus.PROXIMO_A_VENCER) {
+      void this.notificationsService.notify(ownerId, {
+        titulo: 'Contrato próximo a vencer',
+        mensaje: `El contrato ${contract.codigoContrato} está próximo a vencer`,
+        tipo: NotificationType.CONTRACT,
+        prioridad: NotificationPriority.HIGH,
+        metadata: { contractId: id, codigoContrato: contract.codigoContrato },
+      });
+    }
+
+    return updated;
   }
 
   async remove(id: string, ownerId: string) {
@@ -86,6 +123,13 @@ export class ContractsService {
 
     await this.contractRepository.cancel(id, contract.propertyId);
     this.logger.log(`Contrato cancelado: ${id} por usuario ${ownerId}`);
+
+    void this.notificationsService.logActivity(ownerId, {
+      action: 'CONTRACT_CANCELLED',
+      entityType: 'Contract',
+      entityId: id,
+      descripcion: `Contrato ${contract.codigoContrato} cancelado`,
+    });
   }
 
   private async generateUniqueCode(): Promise<string> {

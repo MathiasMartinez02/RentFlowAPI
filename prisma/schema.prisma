@@ -83,11 +83,17 @@ enum MaintenanceCategory {
 }
 
 enum NotificationType {
-  PAYMENT_DUE
-  PAYMENT_RECEIVED
-  CONTRACT_EXPIRING
-  MAINTENANCE_UPDATE
-  GENERAL
+  PAYMENT
+  CONTRACT
+  MAINTENANCE
+  SYSTEM
+}
+
+enum NotificationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
 }
 
 // ─── Models ───────────────────────────────────────────────────
@@ -114,6 +120,7 @@ model User {
   payments             Payment[]
   notifications        Notification[]
   maintenanceTickets   MaintenanceTicket[]
+  activityLogs         ActivityLog[]
 
   @@map("users")
 }
@@ -308,18 +315,39 @@ model MaintenanceTicket {
 }
 
 model Notification {
-  id        String           @id @default(cuid())
-  title     String
-  message   String           @db.Text
-  type      NotificationType @default(GENERAL)
-  isRead    Boolean          @default(false)
+  id        String               @id @default(cuid())
+  titulo    String
+  mensaje   String               @db.Text
+  tipo      NotificationType     @default(SYSTEM)
+  prioridad NotificationPriority @default(MEDIUM)
+  leida     Boolean              @default(false)
   metadata  Json?
-  createdAt DateTime         @default(now())
+  createdAt DateTime             @default(now())
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([isRead])
+  @@index([leida])
+  @@index([tipo])
+  @@index([prioridad])
   @@map("notifications")
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  action      String
+  entityType  String
+  entityId    String
+  descripcion String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([entityType])
+  @@index([action])
+  @@map("activity_logs")
 }

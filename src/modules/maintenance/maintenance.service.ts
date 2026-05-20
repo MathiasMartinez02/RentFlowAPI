@@ -1,16 +1,20 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { NotificationPriority, NotificationType, Prisma } from '@prisma/client';
 import { MaintenanceRepository } from './repositories/maintenance.repository';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateMaintenanceDto } from './dto/create-maintenance.dto';
 import { UpdateMaintenanceDto } from './dto/update-maintenance.dto';
 import { QueryMaintenanceDto } from './dto/query-maintenance.dto';
-import { MaintenanceStatus } from '../../common/enums/maintenance.enum';
+import { MaintenancePriority, MaintenanceStatus } from '../../common/enums/maintenance.enum';
 
 @Injectable()
 export class MaintenanceService {
   private readonly logger = new Logger(MaintenanceService.name);
 
-  constructor(private readonly maintenanceRepository: MaintenanceRepository) {}
+  constructor(
+    private readonly maintenanceRepository: MaintenanceRepository,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async create(ownerId: string, dto: CreateMaintenanceDto) {
     const property = await this.maintenanceRepository.findPropertyByOwner(dto.propertyId, ownerId);
@@ -23,6 +27,24 @@ export class MaintenanceService {
 
     const ticket = await this.maintenanceRepository.create(ownerId, dto);
     this.logger.log(`Ticket de mantenimiento creado: ${ticket.id} por usuario ${ownerId}`);
+
+    void this.notificationsService.logActivity(ownerId, {
+      action: 'MAINTENANCE_CREATED',
+      entityType: 'MaintenanceTicket',
+      entityId: ticket.id,
+      descripcion: `Ticket "${ticket.titulo}" creado (${ticket.prioridad})`,
+    });
+
+    if (dto.prioridad === MaintenancePriority.URGENTE) {
+      void this.notificationsService.notify(ownerId, {
+        titulo: 'Ticket de mantenimiento urgente',
+        mensaje: `Se creó un ticket urgente: ${dto.titulo}`,
+        tipo: NotificationType.MAINTENANCE,
+        prioridad: NotificationPriority.URGENT,
+        metadata: { ticketId: ticket.id, titulo: dto.titulo },
+      });
+    }
+
     return ticket;
   }
 
@@ -66,7 +88,25 @@ export class MaintenanceService {
     if (dto.assignedTo !== undefined) data.assignedTo = dto.assignedTo;
     if (dto.observaciones !== undefined) data.observaciones = dto.observaciones;
 
-    return this.maintenanceRepository.update(id, data);
+    const updated = await this.maintenanceRepository.update(id, data);
+
+    if (nuevoEstado === MaintenanceStatus.RESUELTO && ticket.estado !== MaintenanceStatus.RESUELTO) {
+      void this.notificationsService.notify(ownerId, {
+        titulo: 'Ticket resuelto',
+        mensaje: `El ticket "${ticket.titulo}" fue marcado como resuelto`,
+        tipo: NotificationType.MAINTENANCE,
+        prioridad: NotificationPriority.MEDIUM,
+        metadata: { ticketId: id, titulo: ticket.titulo },
+      });
+      void this.notificationsService.logActivity(ownerId, {
+        action: 'MAINTENANCE_RESOLVED',
+        entityType: 'MaintenanceTicket',
+        entityId: id,
+        descripcion: `Ticket "${ticket.titulo}" resuelto`,
+      });
+    }
+
+    return updated;
   }
 
   async remove(id: string, ownerId: string) {

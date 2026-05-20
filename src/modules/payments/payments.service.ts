@@ -1,6 +1,13 @@
-import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { NotificationPriority, NotificationType, Prisma } from '@prisma/client';
 import { PaymentRepository } from './repositories/payment.repository';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { QueryPaymentsDto } from './dto/query-payments.dto';
@@ -10,7 +17,10 @@ import { PaymentStatus } from '../../common/enums/payment.enum';
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
 
-  constructor(private readonly paymentRepository: PaymentRepository) {}
+  constructor(
+    private readonly paymentRepository: PaymentRepository,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async create(ownerId: string, dto: CreatePaymentDto) {
     const contract = await this.paymentRepository.findContractByOwner(dto.contractId, ownerId);
@@ -43,8 +53,22 @@ export class PaymentsService {
       contract.propertyId,
       resolvedDto,
     );
-
     this.logger.log(`Pago creado: ${payment.id} (período ${dto.periodo}) por usuario ${ownerId}`);
+
+    void this.notificationsService.notify(ownerId, {
+      titulo: 'Pago creado',
+      mensaje: `Se creó el pago del período ${dto.periodo}`,
+      tipo: NotificationType.PAYMENT,
+      prioridad: NotificationPriority.LOW,
+      metadata: { paymentId: payment.id, periodo: dto.periodo, estado },
+    });
+    void this.notificationsService.logActivity(ownerId, {
+      action: 'PAYMENT_CREATED',
+      entityType: 'Payment',
+      entityId: payment.id,
+      descripcion: `Pago creado para período ${dto.periodo} (${estado})`,
+    });
+
     return payment;
   }
 
@@ -97,7 +121,35 @@ export class PaymentsService {
     }
     if (dto.observaciones !== undefined) data.observaciones = dto.observaciones;
 
-    return this.paymentRepository.update(id, data);
+    const updated = await this.paymentRepository.update(id, data);
+
+    if (nuevoEstado === PaymentStatus.PAGADO && payment.estado !== PaymentStatus.PAGADO) {
+      void this.notificationsService.notify(ownerId, {
+        titulo: 'Pago registrado',
+        mensaje: `Se registró el pago del período ${payment.periodo}`,
+        tipo: NotificationType.PAYMENT,
+        prioridad: NotificationPriority.MEDIUM,
+        metadata: { paymentId: id, periodo: payment.periodo },
+      });
+      void this.notificationsService.logActivity(ownerId, {
+        action: 'PAYMENT_PAID',
+        entityType: 'Payment',
+        entityId: id,
+        descripcion: `Pago del período ${payment.periodo} registrado como pagado`,
+      });
+    }
+
+    if (nuevoEstado === PaymentStatus.VENCIDO && payment.estado !== PaymentStatus.VENCIDO) {
+      void this.notificationsService.notify(ownerId, {
+        titulo: 'Pago vencido',
+        mensaje: `El pago del período ${payment.periodo} está vencido`,
+        tipo: NotificationType.PAYMENT,
+        prioridad: NotificationPriority.HIGH,
+        metadata: { paymentId: id, periodo: payment.periodo },
+      });
+    }
+
+    return updated;
   }
 
   async remove(id: string, ownerId: string) {
@@ -120,7 +172,7 @@ export class PaymentsService {
       0,
       Math.floor((Date.now() - fechaVencimiento.getTime()) / (1000 * 60 * 60 * 24)),
     );
-    const rate = Math.min(daysOverdue * 0.001, 0.3); // 0.1% diario, máximo 30%
+    const rate = Math.min(daysOverdue * 0.001, 0.3);
     return Number((monto * rate).toFixed(2));
   }
 }
