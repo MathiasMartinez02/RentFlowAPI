@@ -28,6 +28,13 @@ enum PropertyType {
   LOCAL
 }
 
+enum TenantStatus {
+  ACTIVO
+  MOROSO
+  INACTIVO
+  PENDIENTE
+}
+
 enum ContractStatus {
   PENDING
   ACTIVE
@@ -67,14 +74,14 @@ enum NotificationType {
 // ─── Models ───────────────────────────────────────────────────
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  nombre    String
-  apellido  String
-  empresa   String?
-  phone     String?
-  avatar    String?
+  id          String    @id @default(cuid())
+  email       String    @unique
+  password    String
+  nombre      String
+  apellido    String
+  empresa     String?
+  phone       String?
+  avatar      String?
   role        Role      @default(USER)
   isActive    Boolean   @default(true)
   ultimoLogin DateTime?
@@ -83,6 +90,7 @@ model User {
 
   refreshTokens RefreshToken[]
   properties    Property[]
+  tenants       Tenant[]
   notifications Notification[]
 
   @@map("users")
@@ -127,6 +135,7 @@ model Property {
 
   contracts          Contract[]
   maintenanceTickets MaintenanceTicket[]
+  tenants            Tenant[]
 
   @@index([ownerId])
   @@index([estado])
@@ -137,22 +146,33 @@ model Property {
 }
 
 model Tenant {
-  id               String   @id @default(cuid())
-  email            String   @unique
-  firstName        String
-  lastName         String
-  phone            String
-  dni              String   @unique
-  occupation       String?
-  monthlyIncome    Decimal? @db.Decimal(10, 2)
-  emergencyContact String?
-  notes            String?
-  isActive         Boolean  @default(true)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id              String       @id @default(cuid())
+  nombre          String
+  apellido        String
+  email           String
+  telefono        String
+  dni             String
+  fechaNacimiento DateTime?
+  direccion       String?
+  estado          TenantStatus @default(PENDIENTE)
+  observaciones   String?      @db.Text
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  propertyId String?
+  property   Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
 
   contracts Contract[]
 
+  @@unique([email, ownerId])
+  @@unique([dni, ownerId])
+  @@index([ownerId])
+  @@index([estado])
+  @@index([propertyId])
   @@map("tenants")
 }
 

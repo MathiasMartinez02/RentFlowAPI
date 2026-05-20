@@ -1,46 +1,68 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PaginationDto } from '../../common/dto/pagination.dto';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiConflictResponse,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CreateTenantDto } from './dto/create-tenant.dto';
+import { PaginatedTenantsResponseDto, TenantResponseDto } from './dto/tenant-response.dto';
+import { QueryTenantsDto } from './dto/query-tenants.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { TenantsService } from './tenants.service';
 
-@ApiTags('Tenants')
+@ApiTags('Inquilinos')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('tenants')
 export class TenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new tenant' })
-  create(@Body() dto: CreateTenantDto) {
-    return this.tenantsService.create(dto);
+  @ApiOperation({ summary: 'Crear un nuevo inquilino' })
+  @ApiCreatedResponse({ type: TenantResponseDto })
+  @ApiConflictResponse({ description: 'Email o DNI ya registrado para este usuario' })
+  @ApiNotFoundResponse({ description: 'Propiedad no encontrada al intentar asignarla' })
+  create(@CurrentUser('id') ownerId: string, @Body() dto: CreateTenantDto) {
+    return this.tenantsService.create(ownerId, dto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all tenants' })
-  findAll(@Query() pagination: PaginationDto) {
-    return this.tenantsService.findAll(pagination);
+  @ApiOperation({ summary: 'Listar inquilinos con filtros, búsqueda y paginación' })
+  @ApiOkResponse({ type: PaginatedTenantsResponseDto })
+  findAll(@CurrentUser('id') ownerId: string, @Query() query: QueryTenantsDto) {
+    return this.tenantsService.findAll(ownerId, query);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get tenant by ID' })
-  findOne(@Param('id') id: string) {
-    return this.tenantsService.findOne(id);
+  @ApiOperation({ summary: 'Obtener un inquilino por ID' })
+  @ApiOkResponse({ type: TenantResponseDto })
+  @ApiNotFoundResponse({ description: 'Inquilino no encontrado' })
+  findOne(@Param('id') id: string, @CurrentUser('id') ownerId: string) {
+    return this.tenantsService.findOne(id, ownerId);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update tenant' })
-  update(@Param('id') id: string, @Body() dto: UpdateTenantDto) {
-    return this.tenantsService.update(id, dto);
+  @ApiOperation({ summary: 'Actualizar un inquilino' })
+  @ApiOkResponse({ type: TenantResponseDto })
+  @ApiNotFoundResponse({ description: 'Inquilino no encontrado' })
+  @ApiConflictResponse({ description: 'Email o DNI ya registrado para este usuario' })
+  update(
+    @Param('id') id: string,
+    @CurrentUser('id') ownerId: string,
+    @Body() dto: UpdateTenantDto,
+  ) {
+    return this.tenantsService.update(id, ownerId, dto);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete tenant (soft delete)' })
-  remove(@Param('id') id: string) {
-    return this.tenantsService.remove(id);
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Dar de baja un inquilino (soft delete)' })
+  @ApiNotFoundResponse({ description: 'Inquilino no encontrado' })
+  remove(@Param('id') id: string, @CurrentUser('id') ownerId: string) {
+    return this.tenantsService.remove(id, ownerId);
   }
 }

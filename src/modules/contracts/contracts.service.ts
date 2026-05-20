@@ -43,7 +43,7 @@ export class ContractsService {
         orderBy: { createdAt: 'desc' },
         include: {
           property: { select: { id: true, nombre: true, direccion: true } },
-          tenant: { select: { id: true, firstName: true, lastName: true, email: true } },
+          tenant: { select: { id: true, nombre: true, apellido: true, email: true } },
         },
       }),
       this.prisma.contract.count(),

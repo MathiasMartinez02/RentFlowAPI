@@ -83,7 +83,7 @@ export class DashboardService {
         include: {
           contract: {
             select: {
-              tenant: { select: { firstName: true, lastName: true } },
+              tenant: { select: { nombre: true, apellido: true } },
               property: { select: { nombre: true } },
             },
           },
@@ -102,7 +102,7 @@ export class DashboardService {
           endDate: { lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
         },
         include: {
-          tenant: { select: { firstName: true, lastName: true, email: true } },
+          tenant: { select: { nombre: true, apellido: true, email: true } },
           property: { select: { nombre: true } },
         },
         orderBy: { endDate: 'asc' },
