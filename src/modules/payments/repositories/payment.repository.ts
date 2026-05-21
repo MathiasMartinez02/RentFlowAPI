@@ -44,7 +44,7 @@ export class PaymentRepository {
     });
   }
 
-  async findMany(ownerId: string, query: QueryPaymentsDto) {
+  async findMany(ownerId: string | undefined, query: QueryPaymentsDto) {
     const { skip, take, page, limit } = getPaginationMeta(query);
     const where = this.buildWhere(ownerId, query);
     const orderBy = this.buildOrderBy(query);
@@ -57,9 +57,9 @@ export class PaymentRepository {
     return buildPaginatedResult(items, total, page, limit);
   }
 
-  async findById(id: string, ownerId: string) {
+  async findById(id: string, ownerId: string | undefined) {
     return this.prisma.payment.findFirst({
-      where: { id, ownerId, isActive: true },
+      where: { id, ...(ownerId && { ownerId }), isActive: true },
       include: PAYMENT_INCLUDE,
     });
   }
@@ -97,9 +97,9 @@ export class PaymentRepository {
     });
   }
 
-  async getOverviewStats(ownerId: string): Promise<IPaymentStats> {
+  async getOverviewStats(ownerId: string | undefined): Promise<IPaymentStats> {
     const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    const baseWhere = { ownerId, isActive: true };
+    const baseWhere = { ...(ownerId && { ownerId }), isActive: true };
 
     const [cobradoMes, pendientes, vencidos, pagados, ingresosTotales, montoPendiente, montoVencido] =
       await this.prisma.$transaction([
@@ -145,8 +145,8 @@ export class PaymentRepository {
     };
   }
 
-  private buildWhere(ownerId: string, query: QueryPaymentsDto): Prisma.PaymentWhereInput {
-    const where: Prisma.PaymentWhereInput = { ownerId, isActive: true };
+  private buildWhere(ownerId: string | undefined, query: QueryPaymentsDto): Prisma.PaymentWhereInput {
+    const where: Prisma.PaymentWhereInput = { ...(ownerId && { ownerId }), isActive: true };
 
     if (query.estado) where.estado = query.estado as PaymentStatus;
     if (query.metodoPago) where.metodoPago = query.metodoPago as PaymentMethod;

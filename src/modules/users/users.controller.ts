@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -19,10 +20,13 @@ import {
 } from '@nestjs/swagger';
 import { AdminOnly } from '../../common/decorators/admin-only.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Role } from '../../common/enums/role.enum';
 import { FilterUsersDto } from './dto/filter-users.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangeRoleDto } from './dto/change-role.dto';
 import { PaginatedUsersResponseDto, UserResponseDto } from './dto/user-response.dto';
 import { UserEntity } from './entities/user.entity';
 import { UsersService } from './users.service';
@@ -36,53 +40,36 @@ import { UsersService } from './users.service';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  // ─────────────────────────────────────────────────────────────
-  // GET /users/me  — Any authenticated user
-  // ─────────────────────────────────────────────────────────────
   @Get('me')
-  @ApiOperation({
-    summary: 'Get my profile',
-    description: 'Returns the profile of the currently authenticated user.',
-  })
+  @ApiOperation({ summary: 'Obtener mi perfil' })
   @ApiOkResponse({ type: UserResponseDto })
   getProfile(@CurrentUser() user: any) {
     return { message: 'Profile retrieved successfully', data: user };
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // PATCH /users/me  — Any authenticated user
-  // ─────────────────────────────────────────────────────────────
   @Patch('me')
-  @ApiOperation({
-    summary: 'Update my profile',
-    description: 'Updates nombre, apellido, empresa, phone or avatar. Email and role cannot be changed here.',
-  })
+  @ApiOperation({ summary: 'Actualizar mi perfil (nombre, empresa, teléfono, avatar)' })
   @ApiOkResponse({ type: UserResponseDto })
   updateProfile(@CurrentUser('id') userId: string, @Body() dto: UpdateProfileDto) {
     return this.usersService.updateProfile(userId, dto);
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // GET /users  — ADMIN only
-  // ─────────────────────────────────────────────────────────────
   @Get()
-  @AdminOnly()
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.CLIENTE)
   @ApiOperation({
-    summary: 'List all users [ADMIN]',
-    description: 'Paginated list with optional filters: role, isActive, search (nombre/apellido/email).',
+    summary: 'Listar usuarios [ADMIN/SUPER_ADMIN/CLIENTE]',
+    description:
+      'SUPER_ADMIN ve todos. ADMIN y CLIENTE ven solo sus usuarios de organización (staff + ellos mismos).',
   })
   @ApiOkResponse({ type: PaginatedUsersResponseDto })
-  findAll(@Query() filters: FilterUsersDto) {
-    return this.usersService.findAll(filters);
+  findAll(@Query() filters: FilterUsersDto, @CurrentUser() user: any) {
+    return this.usersService.findAll(filters, user);
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // GET /users/:id  — ADMIN only
-  // ─────────────────────────────────────────────────────────────
   @Get(':id')
-  @AdminOnly()
-  @ApiOperation({ summary: 'Get user by ID [ADMIN]' })
-  @ApiParam({ name: 'id', description: 'User CUID', example: 'clxyz123abc456' })
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.CLIENTE)
+  @ApiOperation({ summary: 'Obtener usuario por ID [ADMIN/SUPER_ADMIN/CLIENTE]' })
+  @ApiParam({ name: 'id', description: 'User CUID' })
   @ApiOkResponse({ type: UserResponseDto })
   findOne(@Param('id') id: string) {
     return this.usersService.findById(id).then((user) => ({
@@ -91,15 +78,44 @@ export class UsersController {
     }));
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // DELETE /users/:id/deactivate  — ADMIN only
-  // ─────────────────────────────────────────────────────────────
+  @Patch(':id/role')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({
+    summary: 'Cambiar rol de un usuario [ADMIN/SUPER_ADMIN]',
+    description:
+      'ADMIN puede asignar: FINANZAS, VENDEDOR, MANTENIMIENTO, INQUILINO. ' +
+      'SUPER_ADMIN puede asignar cualquier rol. ' +
+      'Para roles staff incluir organizationId; para INQUILINO incluir linkedTenantId.',
+  })
+  @ApiParam({ name: 'id', description: 'User CUID' })
+  @ApiOkResponse({ type: UserResponseDto })
+  changeRole(
+    @Param('id') id: string,
+    @Body() dto: ChangeRoleDto,
+    @CurrentUser('role') callerRole: string,
+  ) {
+    // ADMIN no puede promover a SUPER_ADMIN ni a otro ADMIN
+    if (
+      callerRole === Role.ADMIN &&
+      [Role.SUPER_ADMIN, Role.ADMIN].includes(dto.role)
+    ) {
+      throw new Error('ADMIN cannot assign SUPER_ADMIN or ADMIN roles');
+    }
+    return this.usersService.changeRole(id, dto);
+  }
+
+  @Post(':id/activate')
+  @AdminOnly()
+  @ApiOperation({ summary: 'Reactivar un usuario desactivado [ADMIN/SUPER_ADMIN]' })
+  @ApiParam({ name: 'id', description: 'User CUID' })
+  @ApiOkResponse({ description: 'User activated successfully' })
+  activate(@Param('id') id: string) {
+    return this.usersService.activate(id);
+  }
+
   @Delete(':id/deactivate')
   @AdminOnly()
-  @ApiOperation({
-    summary: 'Deactivate user [ADMIN]',
-    description: 'Soft delete — sets isActive to false. The user cannot log in afterwards.',
-  })
+  @ApiOperation({ summary: 'Desactivar usuario (soft delete) [ADMIN/SUPER_ADMIN]' })
   @ApiParam({ name: 'id', description: 'User CUID' })
   @ApiOkResponse({ description: 'User deactivated successfully' })
   deactivate(@Param('id') id: string) {

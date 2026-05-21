@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -6,6 +6,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { Role } from '../../common/enums/role.enum';
+import { AuthUser, resolveOwnerId } from '../../common/helpers/resolve-owner.helper';
 import {
   DashboardOverviewDto,
   MaintenanceAnalyticsDto,
@@ -17,60 +22,50 @@ import { DashboardService } from './dashboard.service';
 
 @ApiTags('Dashboard')
 @ApiBearerAuth('JWT-auth')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.CLIENTE, Role.FINANZAS, Role.VENDEDOR, Role.MANTENIMIENTO)
 @Controller('dashboard')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
   @Get('overview')
-  @ApiOperation({
-    summary: 'KPIs generales: propiedades, contratos, pagos y mantenimiento',
-  })
+  @ApiOperation({ summary: 'KPIs generales: propiedades, contratos, pagos y mantenimiento' })
   @ApiOkResponse({ type: DashboardOverviewDto })
-  getOverview(@CurrentUser('id') ownerId: string) {
-    return this.dashboardService.getOverview(ownerId);
+  getOverview(@CurrentUser() user: AuthUser) {
+    return this.dashboardService.getOverview(resolveOwnerId(user));
   }
 
   @Get('revenue')
-  @ApiOperation({
-    summary: 'Analytics de ingresos: últimos 12 meses, comparativa anual y mejor mes',
-  })
+  @ApiOperation({ summary: 'Analytics de ingresos: últimos 12 meses, comparativa anual y mejor mes' })
   @ApiOkResponse({ type: RevenueAnalyticsDto })
-  getRevenue(@CurrentUser('id') ownerId: string) {
-    return this.dashboardService.getRevenueAnalytics(ownerId);
+  getRevenue(@CurrentUser() user: AuthUser) {
+    return this.dashboardService.getRevenueAnalytics(resolveOwnerId(user));
   }
 
   @Get('occupancy')
-  @ApiOperation({
-    summary: 'Analytics de ocupación: tasa global y distribución por tipo de propiedad',
-  })
+  @ApiOperation({ summary: 'Analytics de ocupación: tasa global y distribución por tipo de propiedad' })
   @ApiOkResponse({ type: OccupancyAnalyticsDto })
-  getOccupancy(@CurrentUser('id') ownerId: string) {
-    return this.dashboardService.getOccupancyAnalytics(ownerId);
+  getOccupancy(@CurrentUser() user: AuthUser) {
+    return this.dashboardService.getOccupancyAnalytics(resolveOwnerId(user));
   }
 
   @Get('payments')
-  @ApiOperation({
-    summary: 'Analytics financieros: collection rate, mora, distribución por método y estado',
-  })
+  @ApiOperation({ summary: 'Analytics financieros: collection rate, mora, distribución por método y estado' })
   @ApiOkResponse({ type: PaymentsAnalyticsDto })
-  getPayments(@CurrentUser('id') ownerId: string) {
-    return this.dashboardService.getPaymentsAnalytics(ownerId);
+  getPayments(@CurrentUser() user: AuthUser) {
+    return this.dashboardService.getPaymentsAnalytics(resolveOwnerId(user));
   }
 
   @Get('maintenance')
-  @ApiOperation({
-    summary: 'Analytics de mantenimiento: costos, tiempo de resolución y distribución',
-  })
+  @ApiOperation({ summary: 'Analytics de mantenimiento: costos, tiempo de resolución y distribución' })
   @ApiOkResponse({ type: MaintenanceAnalyticsDto })
-  getMaintenance(@CurrentUser('id') ownerId: string) {
-    return this.dashboardService.getMaintenanceAnalytics(ownerId);
+  getMaintenance(@CurrentUser() user: AuthUser) {
+    return this.dashboardService.getMaintenanceAnalytics(resolveOwnerId(user));
   }
 
   @Get('activity')
-  @ApiOperation({
-    summary: 'Actividad reciente: últimos pagos, contratos, tickets y log de actividad',
-  })
-  getActivity(@CurrentUser('id') ownerId: string) {
-    return this.dashboardService.getRecentActivity(ownerId);
+  @ApiOperation({ summary: 'Actividad reciente: últimos pagos, contratos, tickets y log de actividad' })
+  getActivity(@CurrentUser() user: AuthUser) {
+    return this.dashboardService.getRecentActivity(resolveOwnerId(user));
   }
 }

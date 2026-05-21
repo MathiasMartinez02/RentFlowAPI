@@ -29,22 +29,22 @@ export class PropertiesService {
     return property;
   }
 
-  async findAll(ownerId: string, query: QueryPropertiesDto) {
+  async findAll(ownerId: string | undefined, query: QueryPropertiesDto) {
     return this.propertyRepository.findMany(ownerId, query);
   }
 
-  async findOne(id: string, ownerId: string) {
+  async findOne(id: string, ownerId: string | undefined) {
     const property = await this.propertyRepository.findById(id, ownerId);
     if (!property) throw new NotFoundException(`Propiedad ${id} no encontrada`);
     return property;
   }
 
-  async update(id: string, ownerId: string, dto: UpdatePropertyDto) {
+  async update(id: string, ownerId: string | undefined, dto: UpdatePropertyDto) {
     await this.findOne(id, ownerId);
     return this.propertyRepository.update(id, dto);
   }
 
-  async remove(id: string, ownerId: string) {
+  async remove(id: string, ownerId: string | undefined) {
     await this.findOne(id, ownerId);
     await this.propertyRepository.softDelete(id);
   }

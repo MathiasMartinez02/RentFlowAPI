@@ -72,11 +72,11 @@ export class PaymentsService {
     return payment;
   }
 
-  async findAll(ownerId: string, query: QueryPaymentsDto) {
+  async findAll(ownerId: string | undefined, query: QueryPaymentsDto) {
     return this.paymentRepository.findMany(ownerId, query);
   }
 
-  async findOne(id: string, ownerId: string) {
+  async findOne(id: string, ownerId: string | undefined) {
     const payment = await this.paymentRepository.findById(id, ownerId);
     if (!payment) throw new NotFoundException(`Pago ${id} no encontrado`);
     return payment;
@@ -163,7 +163,7 @@ export class PaymentsService {
     this.logger.log(`Pago cancelado: ${id} por usuario ${ownerId}`);
   }
 
-  async getOverview(ownerId: string) {
+  async getOverview(ownerId: string | undefined) {
     return this.paymentRepository.getOverviewStats(ownerId);
   }
 

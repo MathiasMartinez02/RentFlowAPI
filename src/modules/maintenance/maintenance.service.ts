@@ -48,17 +48,17 @@ export class MaintenanceService {
     return ticket;
   }
 
-  async findAll(ownerId: string, query: QueryMaintenanceDto) {
+  async findAll(ownerId: string | undefined, query: QueryMaintenanceDto) {
     return this.maintenanceRepository.findMany(ownerId, query);
   }
 
-  async findOne(id: string, ownerId: string) {
+  async findOne(id: string, ownerId: string | undefined) {
     const ticket = await this.maintenanceRepository.findById(id, ownerId);
     if (!ticket) throw new NotFoundException(`Ticket ${id} no encontrado`);
     return ticket;
   }
 
-  async update(id: string, ownerId: string, dto: UpdateMaintenanceDto) {
+  async update(id: string, ownerId: string | undefined, dto: UpdateMaintenanceDto) {
     const ticket = await this.findOne(id, ownerId);
 
     if (ticket.estado === MaintenanceStatus.CERRADO) {
@@ -90,7 +90,7 @@ export class MaintenanceService {
 
     const updated = await this.maintenanceRepository.update(id, data);
 
-    if (nuevoEstado === MaintenanceStatus.RESUELTO && ticket.estado !== MaintenanceStatus.RESUELTO) {
+    if (nuevoEstado === MaintenanceStatus.RESUELTO && ticket.estado !== MaintenanceStatus.RESUELTO && ownerId) {
       void this.notificationsService.notify(ownerId, {
         titulo: 'Ticket resuelto',
         mensaje: `El ticket "${ticket.titulo}" fue marcado como resuelto`,
@@ -109,7 +109,7 @@ export class MaintenanceService {
     return updated;
   }
 
-  async remove(id: string, ownerId: string) {
+  async remove(id: string, ownerId: string | undefined) {
     const ticket = await this.findOne(id, ownerId);
 
     if (ticket.estado === MaintenanceStatus.CERRADO) {
@@ -120,7 +120,7 @@ export class MaintenanceService {
     this.logger.log(`Ticket de mantenimiento cerrado: ${id} por usuario ${ownerId}`);
   }
 
-  async getOverview(ownerId: string) {
+  async getOverview(ownerId: string | undefined) {
     return this.maintenanceRepository.getOverviewStats(ownerId);
   }
 }

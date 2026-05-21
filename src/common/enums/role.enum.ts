@@ -1,4 +1,13 @@
 export enum Role {
+  SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN = 'ADMIN',
-  USER = 'USER',
+  FINANZAS = 'FINANZAS',
+  VENDEDOR = 'VENDEDOR',
+  MANTENIMIENTO = 'MANTENIMIENTO',
+  CLIENTE = 'CLIENTE',
+  INQUILINO = 'INQUILINO',
 }
+
+export const STAFF_ROLES = new Set<Role>([Role.FINANZAS, Role.VENDEDOR, Role.MANTENIMIENTO]);
+
+export const OWNER_ROLES = new Set<Role>([Role.SUPER_ADMIN, Role.ADMIN, Role.CLIENTE]);

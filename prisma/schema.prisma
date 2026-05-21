@@ -10,8 +10,13 @@ datasource db {
 // ─── Enums ────────────────────────────────────────────────────
 
 enum Role {
+  SUPER_ADMIN
   ADMIN
-  USER
+  FINANZAS
+  VENDEDOR
+  MANTENIMIENTO
+  CLIENTE
+  INQUILINO
 }
 
 enum PropertyStatus {
@@ -107,12 +112,15 @@ model User {
   empresa     String?
   phone       String?
   avatar      String?
-  role        Role      @default(USER)
-  isActive    Boolean   @default(true)
-  ultimoLogin DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  role           Role    @default(CLIENTE)
+  organizationId String?
+  linkedTenantId String? @unique
+  isActive       Boolean  @default(true)
+  ultimoLogin    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
+  linkedTenant         Tenant?       @relation("UserTenant", fields: [linkedTenantId], references: [id], onDelete: SetNull)
   refreshTokens        RefreshToken[]
   properties           Property[]
   tenants              Tenant[]
@@ -200,6 +208,7 @@ model Tenant {
   contracts          Contract[]
   payments           Payment[]
   maintenanceTickets MaintenanceTicket[]
+  linkedUser         User?              @relation("UserTenant")
 
   @@unique([email, ownerId])
   @@unique([dni, ownerId])

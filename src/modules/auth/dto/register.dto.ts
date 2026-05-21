@@ -52,7 +52,7 @@ export class RegisterDto {
   @Transform(({ value }) => value?.trim())
   empresa?: string;
 
-  @ApiPropertyOptional({ enum: Role, default: Role.USER })
+  @ApiPropertyOptional({ enum: Role, default: Role.CLIENTE })
   @IsOptional()
   @IsEnum(Role)
   role?: Role;

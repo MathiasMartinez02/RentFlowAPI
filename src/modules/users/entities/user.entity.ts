@@ -27,7 +27,7 @@ export class UserEntity {
   @ApiPropertyOptional({ example: 'https://cdn.example.com/avatars/user.jpg' })
   avatar: string | null;
 
-  @ApiProperty({ enum: Role, example: Role.USER })
+  @ApiProperty({ enum: Role, example: Role.ADMIN })
   role: Role;
 
   @ApiProperty({ example: true })

@@ -64,11 +64,11 @@ export class ContractsService {
     return contract;
   }
 
-  async findAll(ownerId: string, query: QueryContractsDto) {
+  async findAll(ownerId: string | undefined, query: QueryContractsDto) {
     return this.contractRepository.findMany(ownerId, query);
   }
 
-  async findOne(id: string, ownerId: string) {
+  async findOne(id: string, ownerId: string | undefined) {
     const contract = await this.contractRepository.findById(id, ownerId);
     if (!contract) throw new NotFoundException(`Contrato ${id} no encontrado`);
     return contract;

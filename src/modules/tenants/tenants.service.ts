@@ -29,11 +29,11 @@ export class TenantsService {
     return tenant;
   }
 
-  async findAll(ownerId: string, query: QueryTenantsDto) {
+  async findAll(ownerId: string | undefined, query: QueryTenantsDto) {
     return this.tenantRepository.findMany(ownerId, query);
   }
 
-  async findOne(id: string, ownerId: string) {
+  async findOne(id: string, ownerId: string | undefined) {
     const tenant = await this.tenantRepository.findById(id, ownerId);
     if (!tenant) throw new NotFoundException(`Inquilino ${id} no encontrado`);
     return tenant;
@@ -60,7 +60,7 @@ export class TenantsService {
     return this.tenantRepository.update(id, dto);
   }
 
-  async remove(id: string, ownerId: string) {
+  async remove(id: string, ownerId: string | undefined) {
     await this.findOne(id, ownerId);
     await this.tenantRepository.softDelete(id);
   }

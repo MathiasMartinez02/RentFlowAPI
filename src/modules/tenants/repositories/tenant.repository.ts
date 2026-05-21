@@ -16,7 +16,7 @@ export class TenantRepository {
     });
   }
 
-  async findMany(ownerId: string, query: QueryTenantsDto) {
+  async findMany(ownerId: string | undefined, query: QueryTenantsDto) {
     const { skip, take, page, limit } = getPaginationMeta(query);
     const where = this.buildWhere(ownerId, query);
     const orderBy = this.buildOrderBy(query);
@@ -29,9 +29,9 @@ export class TenantRepository {
     return buildPaginatedResult(items, total, page, limit);
   }
 
-  async findById(id: string, ownerId: string) {
+  async findById(id: string, ownerId: string | undefined) {
     return this.prisma.tenant.findFirst({
-      where: { id, ownerId, isActive: true },
+      where: { id, ...(ownerId && { ownerId }), isActive: true },
       include: {
         owner: { select: { id: true, nombre: true, apellido: true, email: true } },
         property: { select: { id: true, nombre: true, direccion: true } },
@@ -75,8 +75,11 @@ export class TenantRepository {
     });
   }
 
-  private buildWhere(ownerId: string, query: QueryTenantsDto): Prisma.TenantWhereInput {
-    const where: Prisma.TenantWhereInput = { ownerId, isActive: true };
+  private buildWhere(ownerId: string | undefined, query: QueryTenantsDto): Prisma.TenantWhereInput {
+    const where: Prisma.TenantWhereInput = {
+      ...(ownerId && { ownerId }),
+      isActive: true,
+    };
 
     if (query.estado) where.estado = query.estado as TenantStatus;
     if (query.propertyId) where.propertyId = query.propertyId;

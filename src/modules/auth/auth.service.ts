@@ -23,6 +23,8 @@ type SafeUser = {
   phone: string | null;
   avatar: string | null;
   role: string;
+  organizationId: string | null;
+  linkedTenantId: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -37,6 +39,8 @@ const USER_SELECT = {
   phone: true,
   avatar: true,
   role: true,
+  organizationId: true,
+  linkedTenantId: true,
   isActive: true,
   ultimoLogin: true,
   createdAt: true,
@@ -72,7 +76,7 @@ export class AuthService {
       select: USER_SELECT,
     });
 
-    const tokens = await this.generateTokens(user.id, user.email, user.role);
+    const tokens = await this.generateTokens(user.id, user.email, user.role, user.organizationId, user.linkedTenantId);
     await this.storeRefreshToken(user.id, tokens.refreshToken);
 
     this.logger.log(`User registered: ${user.email}`);
@@ -90,7 +94,7 @@ export class AuthService {
     const passwordValid = await bcrypt.compare(dto.password, user.password);
     if (!passwordValid) throw new UnauthorizedException('Invalid credentials');
 
-    const tokens = await this.generateTokens(user.id, user.email, user.role);
+    const tokens = await this.generateTokens(user.id, user.email, user.role, user.organizationId, user.linkedTenantId);
 
     // Fire-and-forget: store refresh token + track last login (non-blocking)
     await Promise.all([
@@ -140,7 +144,7 @@ export class AuthService {
       data: { revoked: true },
     });
 
-    const tokens = await this.generateTokens(user.id, user.email, user.role);
+    const tokens = await this.generateTokens(user.id, user.email, user.role, user.organizationId, user.linkedTenantId);
     await this.storeRefreshToken(user.id, tokens.refreshToken);
 
     this.logger.log(`Tokens rotated for user: ${user.email}`);
@@ -186,8 +190,10 @@ export class AuthService {
     userId: string,
     email: string,
     role: string,
+    organizationId?: string | null,
+    linkedTenantId?: string | null,
   ): Promise<AuthTokens> {
-    const payload: JwtPayload = { sub: userId, email, role };
+    const payload: JwtPayload = { sub: userId, email, role, organizationId, linkedTenantId };
 
     const accessExpiresIn = this.configService.get<string>('jwt.accessExpiresIn', '15m');
     const refreshExpiresIn = this.configService.get<string>('jwt.refreshExpiresIn', '7d');

@@ -64,7 +64,7 @@ export class ContractRepository {
     });
   }
 
-  async findMany(ownerId: string, query: QueryContractsDto) {
+  async findMany(ownerId: string | undefined, query: QueryContractsDto) {
     const { skip, take, page, limit } = getPaginationMeta(query);
     const where = this.buildWhere(ownerId, query);
     const orderBy = this.buildOrderBy(query);
@@ -86,9 +86,9 @@ export class ContractRepository {
     return buildPaginatedResult(items, total, page, limit);
   }
 
-  async findById(id: string, ownerId: string) {
+  async findById(id: string, ownerId: string | undefined) {
     return this.prisma.contract.findFirst({
-      where: { id, ownerId, isActive: true },
+      where: { id, ...(ownerId && { ownerId }), isActive: true },
       include: {
         owner: { select: { id: true, nombre: true, apellido: true, email: true } },
         property: { select: PROPERTY_SELECT },
@@ -172,8 +172,8 @@ export class ContractRepository {
     });
   }
 
-  private buildWhere(ownerId: string, query: QueryContractsDto): Prisma.ContractWhereInput {
-    const where: Prisma.ContractWhereInput = { ownerId, isActive: true };
+  private buildWhere(ownerId: string | undefined, query: QueryContractsDto): Prisma.ContractWhereInput {
+    const where: Prisma.ContractWhereInput = { ...(ownerId && { ownerId }), isActive: true };
 
     if (query.estado) where.estado = query.estado as ContractStatus;
     if (query.propertyId) where.propertyId = query.propertyId;

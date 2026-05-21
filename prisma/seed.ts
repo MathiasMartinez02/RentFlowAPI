@@ -107,9 +107,15 @@ function buildPayments(
 async function main() {
   const reset = process.argv.includes('--reset');
 
+  const DEMO_EMAILS = [
+    'admin@rentflow.com', 'superadmin@rentflow.com',
+    'finanzas@rentflow.com', 'vendedor@rentflow.com',
+    'mantenimiento@rentflow.com', 'cliente@rentflow.com', 'inquilino@rentflow.com',
+  ];
+
   if (reset) {
     console.log('♻️  Resetting demo data...');
-    await prisma.user.deleteMany({ where: { email: 'admin@rentflow.com' } });
+    await prisma.user.deleteMany({ where: { email: { in: DEMO_EMAILS } } });
   }
 
   const existing = await prisma.user.findUnique({ where: { email: 'admin@rentflow.com' } });
@@ -129,11 +135,47 @@ async function main() {
       apellido: 'García',
       empresa: 'Inmobiliaria García & Asociados',
       phone: '+54 11 4567-8901',
-      role: 'USER',
+      role: 'ADMIN',
     },
   });
   const uid = user.id;
   console.log(`✅ User created: ${user.email}`);
+
+  // ─── Staff & Role Users ───────────────────────────────────
+  const staffPassword = await bcrypt.hash('Demo123*', 10);
+  const [superAdmin, finanzas, vendedor, mantenimiento, cliente] = await Promise.all([
+    prisma.user.create({ data: {
+      email: 'superadmin@rentflow.com', password: staffPassword,
+      nombre: 'Super', apellido: 'Admin',
+      empresa: 'RentFlow Platform', phone: '+54 11 0000-0001',
+      role: 'SUPER_ADMIN',
+    }}),
+    prisma.user.create({ data: {
+      email: 'finanzas@rentflow.com', password: staffPassword,
+      nombre: 'Laura', apellido: 'Fernández',
+      empresa: 'Inmobiliaria García & Asociados', phone: '+54 11 4567-8902',
+      role: 'FINANZAS', organizationId: uid,
+    }}),
+    prisma.user.create({ data: {
+      email: 'vendedor@rentflow.com', password: staffPassword,
+      nombre: 'Carlos', apellido: 'Rodríguez',
+      empresa: 'Inmobiliaria García & Asociados', phone: '+54 11 4567-8903',
+      role: 'VENDEDOR', organizationId: uid,
+    }}),
+    prisma.user.create({ data: {
+      email: 'mantenimiento@rentflow.com', password: staffPassword,
+      nombre: 'Pablo', apellido: 'Sánchez',
+      empresa: 'Inmobiliaria García & Asociados', phone: '+54 11 4567-8904',
+      role: 'MANTENIMIENTO', organizationId: uid,
+    }}),
+    prisma.user.create({ data: {
+      email: 'cliente@rentflow.com', password: staffPassword,
+      nombre: 'Valeria', apellido: 'López',
+      empresa: 'Inversiones López SRL', phone: '+54 11 4567-8905',
+      role: 'CLIENTE',
+    }}),
+  ]);
+  console.log(`✅ Staff users created: SUPER_ADMIN, FINANZAS, VENDEDOR, MANTENIMIENTO, CLIENTE`);
 
   // ─── Properties (12) ─────────────────────────────────────
   // 9 OCUPADA · 2 DISPONIBLE · 1 MANTENIMIENTO → 75% ocupación
@@ -263,6 +305,16 @@ async function main() {
       nombre: 'Hernán', apellido: 'Vidal', email: 'hernan.vidal@gmail.com', telefono: '+54 11 2345-0123', dni: '30901234' } }),
   ]);
   console.log('✅ 15 tenants created');
+
+  // ─── INQUILINO user (linked to t1) ───────────────────────
+  await prisma.user.create({ data: {
+    email: 'inquilino@rentflow.com',
+    password: await bcrypt.hash('Demo123*', 10),
+    nombre: t1.nombre, apellido: t1.apellido,
+    phone: t1.telefono,
+    role: 'INQUILINO', linkedTenantId: t1.id,
+  }});
+  console.log(`✅ INQUILINO user created (linked to tenant: ${t1.nombre} ${t1.apellido})`);
 
   // ─── Contracts (10) ─────────────────────────────────────────
   // c1-c9 activos (c1 próximo a vencer) · c10 vencido histórico
@@ -557,22 +609,27 @@ async function main() {
   // ─── Summary ────────────────────────────────────────────────
   const totalMensual = 185000 + 320000 + 450000 + 280000 + 240000 + 310000 + 175000 + 220000 + 680000;
   console.log(`
-┌──────────────────────────────────────────────────┐
-│   🎉  RentFlow seed complete!                    │
-├──────────────────────────────────────────────────┤
-│  🔑  Email:       admin@rentflow.com             │
-│  🔑  Password:    Admin123*                      │
-├──────────────────────────────────────────────────┤
-│  🏠  Propiedades: 12 (9 ocupadas · 75%)          │
-│  👤  Inquilinos:  15                             │
-│  📋  Contratos:   10 (9 activos)                 │
-│  💰  Facturación: $${(totalMensual / 1000).toFixed(0)}k/mes (9 contratos)  │
-│  🔧  Mantenimiento: 8 tickets                   │
-│  🔔  Notificaciones: 15 (5 sin leer)            │
-├──────────────────────────────────────────────────┤
-│  📍  API:   http://localhost:3000/api/v1         │
-│  📚  Docs:  http://localhost:3000/api/docs       │
-└──────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│   🎉  RentFlow seed complete!                           │
+├─────────────────────────────────────────────────────────┤
+│  ADMIN         admin@rentflow.com        Admin123*      │
+│  SUPER_ADMIN   superadmin@rentflow.com   Demo123*       │
+│  FINANZAS      finanzas@rentflow.com     Demo123*       │
+│  VENDEDOR      vendedor@rentflow.com     Demo123*       │
+│  MANTENIMIENTO mantenimiento@rentflow.com Demo123*      │
+│  CLIENTE       cliente@rentflow.com      Demo123*       │
+│  INQUILINO     inquilino@rentflow.com    Demo123*       │
+├─────────────────────────────────────────────────────────┤
+│  🏠  Propiedades: 12 (9 ocupadas · 75%)                 │
+│  👤  Inquilinos:  15                                    │
+│  📋  Contratos:   10 (9 activos)                        │
+│  💰  Facturación: $${(totalMensual / 1000).toFixed(0)}k/mes                          │
+│  🔧  Mantenimiento: 8 tickets                          │
+│  🔔  Notificaciones: 15                                │
+├─────────────────────────────────────────────────────────┤
+│  📍  API:   http://localhost:3000/api/v1                │
+│  📚  Docs:  http://localhost:3000/api/docs              │
+└─────────────────────────────────────────────────────────┘
   `);
 }
 

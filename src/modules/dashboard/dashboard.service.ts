@@ -31,7 +31,7 @@ export class DashboardService {
 
   // ─── Overview ───────────────────────────────────────────────
 
-  async getOverview(ownerId: string): Promise<IDashboardOverview> {
+  async getOverview(ownerId: string | undefined): Promise<IDashboardOverview> {
     const now = new Date();
     const firstDayThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const thirtyDaysLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -62,7 +62,7 @@ export class DashboardService {
       ticketsResueltosMes,
       costosMaintAgg,
     ] = await Promise.all([
-      this.prisma.property.count({ where: { ownerId, isActive: true } }),
+      this.prisma.property.count({ where: { ...(ownerId && { ownerId }), isActive: true } }),
       this.prisma.property.count({ where: { ownerId, isActive: true, estado: PropertyStatus.OCUPADA } }),
       this.prisma.property.count({ where: { ownerId, isActive: true, estado: PropertyStatus.DISPONIBLE } }),
       this.prisma.property.count({ where: { ownerId, isActive: true, estado: PropertyStatus.MANTENIMIENTO } }),
@@ -160,7 +160,7 @@ export class DashboardService {
 
   // ─── Revenue Analytics ──────────────────────────────────────
 
-  async getRevenueAnalytics(ownerId: string): Promise<IRevenueAnalytics> {
+  async getRevenueAnalytics(ownerId: string | undefined): Promise<IRevenueAnalytics> {
     const now = new Date();
     const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
     const thisYearStart = new Date(now.getFullYear(), 0, 1);
@@ -250,16 +250,16 @@ export class DashboardService {
 
   // ─── Occupancy Analytics ────────────────────────────────────
 
-  async getOccupancyAnalytics(ownerId: string): Promise<IOccupancyAnalytics> {
+  async getOccupancyAnalytics(ownerId: string | undefined): Promise<IOccupancyAnalytics> {
     const [totalAgg, porTipo, porTipoOcupadas] = await Promise.all([
       this.prisma.property.groupBy({
         by: ['estado'],
-        where: { ownerId, isActive: true },
+        where: { ...(ownerId && { ownerId }), isActive: true },
         _count: { id: true },
       }),
       this.prisma.property.groupBy({
         by: ['tipoPropiedad'],
-        where: { ownerId, isActive: true },
+        where: { ...(ownerId && { ownerId }), isActive: true },
         _count: { id: true },
       }),
       this.prisma.property.groupBy({
@@ -305,10 +305,10 @@ export class DashboardService {
 
   // ─── Payments Analytics ─────────────────────────────────────
 
-  async getPaymentsAnalytics(ownerId: string): Promise<IPaymentsAnalytics> {
+  async getPaymentsAnalytics(ownerId: string | undefined): Promise<IPaymentsAnalytics> {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const baseWhere = { ownerId, isActive: true };
+    const baseWhere = { ...(ownerId && { ownerId }), isActive: true };
 
     const [
       porEstado,
@@ -397,10 +397,10 @@ export class DashboardService {
 
   // ─── Maintenance Analytics ──────────────────────────────────
 
-  async getMaintenanceAnalytics(ownerId: string): Promise<IMaintenanceAnalytics> {
+  async getMaintenanceAnalytics(ownerId: string | undefined): Promise<IMaintenanceAnalytics> {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const baseWhere = { ownerId, isActive: true };
+    const baseWhere = { ...(ownerId && { ownerId }), isActive: true };
     const openStates: MaintenanceStatus[] = [
       MaintenanceStatus.PENDIENTE,
       MaintenanceStatus.EN_PROGRESO,
@@ -503,11 +503,11 @@ export class DashboardService {
 
   // ─── Recent Activity ────────────────────────────────────────
 
-  async getRecentActivity(ownerId: string): Promise<IRecentActivity> {
+  async getRecentActivity(ownerId: string | undefined): Promise<IRecentActivity> {
     const [pagosRecientes, contratosRecientes, ticketsRecientes, actividadesRecientes] =
       await Promise.all([
         this.prisma.payment.findMany({
-          where: { ownerId, isActive: true },
+          where: { ...(ownerId && { ownerId }), isActive: true },
           orderBy: { createdAt: 'desc' },
           take: 10,
           select: {
@@ -523,7 +523,7 @@ export class DashboardService {
           },
         }),
         this.prisma.contract.findMany({
-          where: { ownerId, isActive: true },
+          where: { ...(ownerId && { ownerId }), isActive: true },
           orderBy: { createdAt: 'desc' },
           take: 10,
           select: {
@@ -539,7 +539,7 @@ export class DashboardService {
           },
         }),
         this.prisma.maintenanceTicket.findMany({
-          where: { ownerId, isActive: true },
+          where: { ...(ownerId && { ownerId }), isActive: true },
           orderBy: { createdAt: 'desc' },
           take: 10,
           select: {

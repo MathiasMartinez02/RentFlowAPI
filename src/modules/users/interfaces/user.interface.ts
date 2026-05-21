@@ -9,6 +9,8 @@ export interface IUser {
   phone: string | null;
   avatar: string | null;
   role: Role;
+  organizationId: string | null;
+  linkedTenantId: string | null;
   isActive: boolean;
   ultimoLogin: Date | null;
   createdAt: Date;
@@ -19,5 +21,4 @@ export interface IUserWithPassword extends IUser {
   password: string;
 }
 
-/** User object as returned from Prisma queries (no password) */
 export type SafeUser = Omit<IUserWithPassword, 'password'>;

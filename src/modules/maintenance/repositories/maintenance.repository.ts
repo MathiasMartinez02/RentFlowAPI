@@ -33,7 +33,7 @@ export class MaintenanceRepository {
     });
   }
 
-  async findMany(ownerId: string, query: QueryMaintenanceDto) {
+  async findMany(ownerId: string | undefined, query: QueryMaintenanceDto) {
     const { skip, take, page, limit } = getPaginationMeta(query);
     const where = this.buildWhere(ownerId, query);
     const orderBy = this.buildOrderBy(query);
@@ -46,9 +46,9 @@ export class MaintenanceRepository {
     return buildPaginatedResult(items, total, page, limit);
   }
 
-  async findById(id: string, ownerId: string) {
+  async findById(id: string, ownerId: string | undefined) {
     return this.prisma.maintenanceTicket.findFirst({
-      where: { id, ownerId, isActive: true },
+      where: { id, ...(ownerId && { ownerId }), isActive: true },
       include: TICKET_INCLUDE,
     });
   }
@@ -82,8 +82,8 @@ export class MaintenanceRepository {
     });
   }
 
-  async getOverviewStats(ownerId: string): Promise<IMaintenanceStats> {
-    const baseWhere = { ownerId, isActive: true };
+  async getOverviewStats(ownerId: string | undefined): Promise<IMaintenanceStats> {
+    const baseWhere = { ...(ownerId && { ownerId }), isActive: true };
     const estadosAbiertos: MaintenanceStatus[] = [
       MaintenanceStatus.PENDIENTE,
       MaintenanceStatus.EN_PROGRESO,
@@ -135,8 +135,8 @@ export class MaintenanceRepository {
     };
   }
 
-  private buildWhere(ownerId: string, query: QueryMaintenanceDto): Prisma.MaintenanceTicketWhereInput {
-    const where: Prisma.MaintenanceTicketWhereInput = { ownerId, isActive: true };
+  private buildWhere(ownerId: string | undefined, query: QueryMaintenanceDto): Prisma.MaintenanceTicketWhereInput {
+    const where: Prisma.MaintenanceTicketWhereInput = { ...(ownerId && { ownerId }), isActive: true };
 
     if (query.estado) where.estado = query.estado as MaintenanceStatus;
     if (query.prioridad) where.prioridad = query.prioridad as MaintenancePriority;
