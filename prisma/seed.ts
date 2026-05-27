@@ -1,5 +1,5 @@
 import {
-  PrismaClient, PropertyStatus, PropertyType, TenantStatus,
+  PrismaClient, Role, PropertyStatus, PropertyType, TenantStatus,
   ContractStatus, PaymentStatus, PaymentMethod,
   MaintenanceStatus, MaintenancePriority, MaintenanceCategory,
   NotificationType, NotificationPriority,
@@ -135,7 +135,7 @@ async function main() {
       apellido: 'García',
       empresa: 'Inmobiliaria García & Asociados',
       phone: '+54 11 4567-8901',
-      role: 'ADMIN',
+      role: Role.ADMIN,
     },
   });
   const uid = user.id;
@@ -148,31 +148,31 @@ async function main() {
       email: 'superadmin@rentflow.com', password: staffPassword,
       nombre: 'Super', apellido: 'Admin',
       empresa: 'RentFlow Platform', phone: '+54 11 0000-0001',
-      role: 'SUPER_ADMIN',
+      role: Role.SUPER_ADMIN,
     }}),
     prisma.user.create({ data: {
       email: 'finanzas@rentflow.com', password: staffPassword,
       nombre: 'Laura', apellido: 'Fernández',
       empresa: 'Inmobiliaria García & Asociados', phone: '+54 11 4567-8902',
-      role: 'FINANZAS', organizationId: uid,
+      role: Role.FINANZAS, organizationId: uid,
     }}),
     prisma.user.create({ data: {
       email: 'vendedor@rentflow.com', password: staffPassword,
       nombre: 'Carlos', apellido: 'Rodríguez',
       empresa: 'Inmobiliaria García & Asociados', phone: '+54 11 4567-8903',
-      role: 'VENDEDOR', organizationId: uid,
+      role: Role.VENDEDOR, organizationId: uid,
     }}),
     prisma.user.create({ data: {
       email: 'mantenimiento@rentflow.com', password: staffPassword,
       nombre: 'Pablo', apellido: 'Sánchez',
       empresa: 'Inmobiliaria García & Asociados', phone: '+54 11 4567-8904',
-      role: 'MANTENIMIENTO', organizationId: uid,
+      role: Role.MANTENIMIENTO, organizationId: uid,
     }}),
     prisma.user.create({ data: {
       email: 'cliente@rentflow.com', password: staffPassword,
       nombre: 'Valeria', apellido: 'López',
       empresa: 'Inversiones López SRL', phone: '+54 11 4567-8905',
-      role: 'CLIENTE',
+      role: Role.CLIENTE,
     }}),
   ]);
   console.log(`✅ Staff users created: SUPER_ADMIN, FINANZAS, VENDEDOR, MANTENIMIENTO, CLIENTE`);
@@ -312,7 +312,7 @@ async function main() {
     password: await bcrypt.hash('Demo123*', 10),
     nombre: t1.nombre, apellido: t1.apellido,
     phone: t1.telefono,
-    role: 'INQUILINO', linkedTenantId: t1.id,
+    role: Role.INQUILINO, linkedTenantId: t1.id,
   }});
   console.log(`✅ INQUILINO user created (linked to tenant: ${t1.nombre} ${t1.apellido})`);
 
