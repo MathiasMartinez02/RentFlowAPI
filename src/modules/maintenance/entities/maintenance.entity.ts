@@ -1,5 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { MaintenanceCategory, MaintenancePriority, MaintenanceStatus } from '../../../common/enums/maintenance.enum';
+import {
+  MaintenanceCategory,
+  MaintenancePriority,
+  MaintenanceStatus,
+} from '../../../common/enums/maintenance.enum';
 
 export class MaintenanceEntity {
   @ApiProperty() id: string;

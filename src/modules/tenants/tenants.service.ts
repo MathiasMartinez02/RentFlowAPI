@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { TenantRepository } from './repositories/tenant.repository';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { QueryTenantsDto } from './dto/query-tenants.dto';
@@ -8,7 +9,10 @@ import { QueryTenantsDto } from './dto/query-tenants.dto';
 export class TenantsService {
   private readonly logger = new Logger(TenantsService.name);
 
-  constructor(private readonly tenantRepository: TenantRepository) {}
+  constructor(
+    private readonly tenantRepository: TenantRepository,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async create(ownerId: string, dto: CreateTenantDto) {
     const [emailExists, dniExists] = await Promise.all([
@@ -26,6 +30,14 @@ export class TenantsService {
 
     const tenant = await this.tenantRepository.create(ownerId, dto);
     this.logger.log(`Inquilino creado: ${tenant.id} por usuario ${ownerId}`);
+
+    void this.notificationsService.logActivity(ownerId, {
+      action: 'TENANT_CREATED',
+      entityType: 'Tenant',
+      entityId: tenant.id,
+      descripcion: `Inquilino "${tenant.nombre} ${tenant.apellido}" creado`,
+    });
+
     return tenant;
   }
 
@@ -57,11 +69,29 @@ export class TenantsService {
       if (!property) throw new NotFoundException('Propiedad no encontrada');
     }
 
-    return this.tenantRepository.update(id, dto);
+    const updated = await this.tenantRepository.update(id, dto);
+
+    void this.notificationsService.logActivity(ownerId, {
+      action: 'TENANT_UPDATED',
+      entityType: 'Tenant',
+      entityId: id,
+      descripcion: `Inquilino "${updated.nombre} ${updated.apellido}" actualizado`,
+    });
+
+    return updated;
   }
 
   async remove(id: string, ownerId: string | undefined) {
-    await this.findOne(id, ownerId);
+    const tenant = await this.findOne(id, ownerId);
     await this.tenantRepository.softDelete(id);
+
+    if (ownerId) {
+      void this.notificationsService.logActivity(ownerId, {
+        action: 'TENANT_DELETED',
+        entityType: 'Tenant',
+        entityId: id,
+        descripcion: `Inquilino "${tenant.nombre} ${tenant.apellido}" eliminado`,
+      });
+    }
   }
 }

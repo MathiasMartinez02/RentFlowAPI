@@ -147,6 +147,12 @@ export class PaymentsService {
         prioridad: NotificationPriority.HIGH,
         metadata: { paymentId: id, periodo: payment.periodo },
       });
+      void this.notificationsService.logActivity(ownerId, {
+        action: 'PAYMENT_OVERDUE',
+        entityType: 'Payment',
+        entityId: id,
+        descripcion: `Pago del período ${payment.periodo} marcado como vencido`,
+      });
     }
 
     return updated;
@@ -161,6 +167,13 @@ export class PaymentsService {
 
     await this.paymentRepository.softDelete(id);
     this.logger.log(`Pago cancelado: ${id} por usuario ${ownerId}`);
+
+    void this.notificationsService.logActivity(ownerId, {
+      action: 'PAYMENT_CANCELLED',
+      entityType: 'Payment',
+      entityId: id,
+      descripcion: `Pago del período ${payment.periodo} cancelado`,
+    });
   }
 
   async getOverview(ownerId: string | undefined) {

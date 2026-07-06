@@ -13,10 +13,11 @@ export const envValidationSchema = Joi.object({
   REFRESH_TOKEN_EXPIRES: Joi.string().default('7d'),
 
   SWAGGER_ENABLED: Joi.boolean().default(true),
-  LOG_LEVEL: Joi.string()
-    .valid('error', 'warn', 'info', 'debug', 'verbose')
-    .default('debug'),
+  LOG_LEVEL: Joi.string().valid('error', 'warn', 'info', 'debug', 'verbose').default('debug'),
   FRONTEND_URL: Joi.string().optional().default('*'),
+
+  THROTTLE_TTL: Joi.number().default(60),
+  THROTTLE_LIMIT: Joi.number().default(100),
 
   MYSQL_ROOT_PASSWORD: Joi.string().optional(),
   MYSQL_USER: Joi.string().optional(),

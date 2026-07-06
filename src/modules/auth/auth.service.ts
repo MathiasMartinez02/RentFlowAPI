@@ -1,12 +1,7 @@
-import {
-  ConflictException,
-  Injectable,
-  Logger,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthTokens } from './interfaces/auth-tokens.interface';
@@ -76,7 +71,13 @@ export class AuthService {
       select: USER_SELECT,
     });
 
-    const tokens = await this.generateTokens(user.id, user.email, user.role, user.organizationId, user.linkedTenantId);
+    const tokens = await this.generateTokens(
+      user.id,
+      user.email,
+      user.role,
+      user.organizationId,
+      user.linkedTenantId,
+    );
     await this.storeRefreshToken(user.id, tokens.refreshToken);
 
     this.logger.log(`User registered: ${user.email}`);
@@ -94,7 +95,13 @@ export class AuthService {
     const passwordValid = await bcrypt.compare(dto.password, user.password);
     if (!passwordValid) throw new UnauthorizedException('Invalid credentials');
 
-    const tokens = await this.generateTokens(user.id, user.email, user.role, user.organizationId, user.linkedTenantId);
+    const tokens = await this.generateTokens(
+      user.id,
+      user.email,
+      user.role,
+      user.organizationId,
+      user.linkedTenantId,
+    );
 
     // Fire-and-forget: store refresh token + track last login (non-blocking)
     await Promise.all([
@@ -107,6 +114,7 @@ export class AuthService {
 
     this.logger.log(`User logged in: ${user.email}`);
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...safeUser } = user;
 
     return {
@@ -144,7 +152,13 @@ export class AuthService {
       data: { revoked: true },
     });
 
-    const tokens = await this.generateTokens(user.id, user.email, user.role, user.organizationId, user.linkedTenantId);
+    const tokens = await this.generateTokens(
+      user.id,
+      user.email,
+      user.role,
+      user.organizationId,
+      user.linkedTenantId,
+    );
     await this.storeRefreshToken(user.id, tokens.refreshToken);
 
     this.logger.log(`Tokens rotated for user: ${user.email}`);
@@ -193,7 +207,14 @@ export class AuthService {
     organizationId?: string | null,
     linkedTenantId?: string | null,
   ): Promise<AuthTokens> {
-    const payload: JwtPayload = { sub: userId, email, role, organizationId, linkedTenantId };
+    const payload: JwtPayload = {
+      sub: userId,
+      email,
+      role,
+      organizationId,
+      linkedTenantId,
+      jti: randomUUID(),
+    };
 
     const accessExpiresIn = this.configService.get<string>('jwt.accessExpiresIn', '15m');
     const refreshExpiresIn = this.configService.get<string>('jwt.refreshExpiresIn', '7d');

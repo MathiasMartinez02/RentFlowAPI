@@ -1,10 +1,6 @@
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
-import {
-  IStorageProvider,
-  STORAGE_PROVIDER,
-  UploadFolder,
-} from '../interfaces/storage.interface';
+import { IStorageProvider, STORAGE_PROVIDER, UploadFolder } from '../interfaces/storage.interface';
 
 @Injectable()
 export class UploadsService {
@@ -15,11 +11,7 @@ export class UploadsService {
     @Inject(STORAGE_PROVIDER) private readonly storage: IStorageProvider,
   ) {}
 
-  async uploadPropertyImages(
-    files: Express.Multer.File[],
-    propertyId: string,
-    ownerId: string,
-  ) {
+  async uploadPropertyImages(files: Express.Multer.File[], propertyId: string, ownerId: string) {
     if (!files || files.length === 0) {
       throw new BadRequestException('No se recibió ningún archivo');
     }

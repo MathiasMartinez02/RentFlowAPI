@@ -1,4 +1,17 @@
-import { Body, Controller, Delete, ForbiddenException, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiConflictResponse,
@@ -68,11 +81,7 @@ export class TenantsController {
   @ApiOkResponse({ type: TenantResponseDto })
   @ApiNotFoundResponse({ description: 'Inquilino no encontrado' })
   @ApiConflictResponse({ description: 'Email o DNI ya registrado para este usuario' })
-  update(
-    @Param('id') id: string,
-    @CurrentUser() user: AuthUser,
-    @Body() dto: UpdateTenantDto,
-  ) {
+  update(@Param('id') id: string, @CurrentUser() user: AuthUser, @Body() dto: UpdateTenantDto) {
     const ownerId = resolveOwnerId(user) ?? user.id;
     return this.tenantsService.update(id, ownerId, dto);
   }
@@ -80,7 +89,9 @@ export class TenantsController {
   @Delete(':id')
   @CanManageTenants()
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Dar de baja un inquilino (soft delete) [ADMIN/CLIENTE/VENDEDOR/SUPER_ADMIN]' })
+  @ApiOperation({
+    summary: 'Dar de baja un inquilino (soft delete) [ADMIN/CLIENTE/VENDEDOR/SUPER_ADMIN]',
+  })
   @ApiNotFoundResponse({ description: 'Inquilino no encontrado' })
   remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.tenantsService.remove(id, resolveOwnerId(user));

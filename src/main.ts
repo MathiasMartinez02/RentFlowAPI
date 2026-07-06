@@ -1,4 +1,4 @@
-import { NestFactory, Reflector } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
@@ -65,9 +65,9 @@ async function bootstrap() {
       .setTitle('RentFlow API')
       .setDescription(
         `## Enterprise-grade rental management system\n\n` +
-        `**Base URL:** \`/api/v1\`\n\n` +
-        `Use the **Authorize** button to add your JWT token.\n\n` +
-        `Format: \`Bearer <token>\``,
+          `**Base URL:** \`/api/v1\`\n\n` +
+          `Use the **Authorize** button to add your JWT token.\n\n` +
+          `Format: \`Bearer <token>\``,
       )
       .setVersion('1.0.0')
       .addBearerAuth(

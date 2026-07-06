@@ -29,7 +29,10 @@ export class TenantEntity {
   @ApiProperty({ enum: TenantStatus, example: TenantStatus.ACTIVO })
   estado: TenantStatus;
 
-  @ApiPropertyOptional({ example: 'Buen pagador, empleado en relación de dependencia.', nullable: true })
+  @ApiPropertyOptional({
+    example: 'Buen pagador, empleado en relación de dependencia.',
+    nullable: true,
+  })
   observaciones: string | null;
 
   @ApiProperty({ example: true })

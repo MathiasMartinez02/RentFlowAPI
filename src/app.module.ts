@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import appConfig from './config/app.config';
 import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
@@ -11,8 +12,10 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { ContractsModule } from './modules/contracts/contracts.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { HealthModule } from './modules/health/health.module';
+import { LeadsModule } from './modules/leads/leads.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { PublicModule } from './modules/public/public.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { PropertiesModule } from './modules/properties/properties.module';
@@ -28,6 +31,15 @@ import { RolesGuard } from './common/guards/roles.guard';
       validationSchema: envValidationSchema,
       validationOptions: { allowUnknown: true, abortEarly: true },
     }),
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => [
+        {
+          ttl: config.get<number>('THROTTLE_TTL', 60) * 1000,
+          limit: config.get<number>('THROTTLE_LIMIT', 100),
+        },
+      ],
+    }),
     DatabaseModule,
     AuthModule,
     UsersModule,
@@ -36,12 +48,15 @@ import { RolesGuard } from './common/guards/roles.guard';
     ContractsModule,
     PaymentsModule,
     MaintenanceModule,
+    LeadsModule,
+    PublicModule,
     NotificationsModule,
     UploadsModule,
     DashboardModule,
     HealthModule,
   ],
   providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
   ],

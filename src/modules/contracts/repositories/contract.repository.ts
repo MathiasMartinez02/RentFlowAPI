@@ -106,7 +106,8 @@ export class ContractRepository {
     if (dto.montoMensual !== undefined) data.montoMensual = dto.montoMensual;
     if (dto.deposito !== undefined) data.deposito = dto.deposito;
     if (dto.expensas !== undefined) data.expensas = dto.expensas;
-    if (dto.renovacionAutomatica !== undefined) data.renovacionAutomatica = dto.renovacionAutomatica;
+    if (dto.renovacionAutomatica !== undefined)
+      data.renovacionAutomatica = dto.renovacionAutomatica;
     if (dto.estado !== undefined) data.estado = dto.estado as ContractStatus;
     if (dto.observaciones !== undefined) data.observaciones = dto.observaciones;
 
@@ -172,7 +173,10 @@ export class ContractRepository {
     });
   }
 
-  private buildWhere(ownerId: string | undefined, query: QueryContractsDto): Prisma.ContractWhereInput {
+  private buildWhere(
+    ownerId: string | undefined,
+    query: QueryContractsDto,
+  ): Prisma.ContractWhereInput {
     const where: Prisma.ContractWhereInput = { ...(ownerId && { ownerId }), isActive: true };
 
     if (query.estado) where.estado = query.estado as ContractStatus;

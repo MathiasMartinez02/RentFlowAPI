@@ -41,7 +41,9 @@ export class CreateTenantDto {
 
   @ApiProperty({ example: '30123456', description: 'Número de documento nacional', maxLength: 20 })
   @IsString()
-  @Matches(/^[0-9A-Za-z\-\.]+$/, { message: 'dni solo puede contener números, letras, guiones y puntos' })
+  @Matches(/^[0-9A-Za-z\-\.]+$/, {
+    message: 'dni solo puede contener números, letras, guiones y puntos',
+  })
   @MaxLength(20)
   @Transform(({ value }) => value?.trim())
   dni: string;
@@ -67,14 +69,20 @@ export class CreateTenantDto {
   @IsEnum(TenantStatus)
   estado?: TenantStatus;
 
-  @ApiPropertyOptional({ example: 'Buen pagador, empleado en relación de dependencia.', maxLength: 2000 })
+  @ApiPropertyOptional({
+    example: 'Buen pagador, empleado en relación de dependencia.',
+    maxLength: 2000,
+  })
   @IsOptional()
   @IsString()
   @MaxLength(2000)
   @Transform(({ value }) => value?.trim())
   observaciones?: string;
 
-  @ApiPropertyOptional({ example: 'clxyz_property_id', description: 'ID de la propiedad a asociar' })
+  @ApiPropertyOptional({
+    example: 'clxyz_property_id',
+    description: 'ID de la propiedad a asociar',
+  })
   @IsOptional()
   @IsString()
   propertyId?: string;

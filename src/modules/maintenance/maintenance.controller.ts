@@ -57,7 +57,9 @@ export class MaintenanceController {
 
   @Get('stats/overview')
   @CanManageMaintenance()
-  @ApiOperation({ summary: 'Obtener métricas de mantenimiento [ADMIN/CLIENTE/MANTENIMIENTO/SUPER_ADMIN]' })
+  @ApiOperation({
+    summary: 'Obtener métricas de mantenimiento [ADMIN/CLIENTE/MANTENIMIENTO/SUPER_ADMIN]',
+  })
   @ApiOkResponse({ type: MaintenanceStatsResponseDto })
   getOverview(@CurrentUser() user: AuthUser) {
     return this.maintenanceService.getOverview(resolveOwnerId(user));
@@ -105,7 +107,9 @@ export class MaintenanceController {
   @Delete(':id')
   @CanManageMaintenance()
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Cerrar un ticket (soft delete) [ADMIN/CLIENTE/MANTENIMIENTO/SUPER_ADMIN]' })
+  @ApiOperation({
+    summary: 'Cerrar un ticket (soft delete) [ADMIN/CLIENTE/MANTENIMIENTO/SUPER_ADMIN]',
+  })
   @ApiNotFoundResponse({ description: 'Ticket no encontrado' })
   @ApiBadRequestResponse({ description: 'El ticket ya está cerrado' })
   remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {

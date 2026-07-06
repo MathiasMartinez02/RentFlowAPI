@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { MaintenanceCategory, MaintenancePriority, MaintenanceStatus, Prisma } from '@prisma/client';
+import {
+  MaintenanceCategory,
+  MaintenancePriority,
+  MaintenanceStatus,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
 import { buildPaginatedResult, getPaginationMeta } from '../../../common/utils/pagination.util';
 import { CreateMaintenanceDto } from '../dto/create-maintenance.dto';
@@ -39,7 +44,13 @@ export class MaintenanceRepository {
     const orderBy = this.buildOrderBy(query);
 
     const [items, total] = await this.prisma.$transaction([
-      this.prisma.maintenanceTicket.findMany({ where, skip, take, orderBy, include: TICKET_INCLUDE }),
+      this.prisma.maintenanceTicket.findMany({
+        where,
+        skip,
+        take,
+        orderBy,
+        include: TICKET_INCLUDE,
+      }),
       this.prisma.maintenanceTicket.count({ where }),
     ]);
 
@@ -99,11 +110,17 @@ export class MaintenanceRepository {
           where: { ...baseWhere, prioridad: MaintenancePriority.URGENTE },
         }),
         this.prisma.maintenanceTicket.count({
-          where: { ...baseWhere, estado: { in: [MaintenanceStatus.RESUELTO, MaintenanceStatus.CERRADO] } },
+          where: {
+            ...baseWhere,
+            estado: { in: [MaintenanceStatus.RESUELTO, MaintenanceStatus.CERRADO] },
+          },
         }),
         this.prisma.maintenanceTicket.aggregate({
           _sum: { costoFinal: true },
-          where: { ...baseWhere, estado: { in: [MaintenanceStatus.RESUELTO, MaintenanceStatus.CERRADO] } },
+          where: {
+            ...baseWhere,
+            estado: { in: [MaintenanceStatus.RESUELTO, MaintenanceStatus.CERRADO] },
+          },
         }),
         this.prisma.maintenanceTicket.findMany({
           where: {
@@ -135,8 +152,14 @@ export class MaintenanceRepository {
     };
   }
 
-  private buildWhere(ownerId: string | undefined, query: QueryMaintenanceDto): Prisma.MaintenanceTicketWhereInput {
-    const where: Prisma.MaintenanceTicketWhereInput = { ...(ownerId && { ownerId }), isActive: true };
+  private buildWhere(
+    ownerId: string | undefined,
+    query: QueryMaintenanceDto,
+  ): Prisma.MaintenanceTicketWhereInput {
+    const where: Prisma.MaintenanceTicketWhereInput = {
+      ...(ownerId && { ownerId }),
+      isActive: true,
+    };
 
     if (query.estado) where.estado = query.estado as MaintenanceStatus;
     if (query.prioridad) where.prioridad = query.prioridad as MaintenancePriority;
@@ -158,7 +181,9 @@ export class MaintenanceRepository {
     return where;
   }
 
-  private buildOrderBy(query: QueryMaintenanceDto): Prisma.MaintenanceTicketOrderByWithRelationInput {
+  private buildOrderBy(
+    query: QueryMaintenanceDto,
+  ): Prisma.MaintenanceTicketOrderByWithRelationInput {
     const field = query.sortBy ?? SortByMaintenance.CREATED_AT;
     const direction = query.sortOrder ?? SortOrder.DESC;
     return { [field]: direction };

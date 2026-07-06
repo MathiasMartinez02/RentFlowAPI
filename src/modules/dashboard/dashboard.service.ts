@@ -6,7 +6,6 @@ import {
   PaymentMethod,
   PaymentStatus,
   PropertyStatus,
-  PropertyType,
 } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import {
@@ -19,8 +18,18 @@ import {
 } from './interfaces/dashboard.interface';
 
 const MESES_ES = [
-  'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-  'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+  'Ene',
+  'Feb',
+  'Mar',
+  'Abr',
+  'May',
+  'Jun',
+  'Jul',
+  'Ago',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dic',
 ];
 
 @Injectable()
@@ -63,10 +72,18 @@ export class DashboardService {
       costosMaintAgg,
     ] = await Promise.all([
       this.prisma.property.count({ where: { ...(ownerId && { ownerId }), isActive: true } }),
-      this.prisma.property.count({ where: { ownerId, isActive: true, estado: PropertyStatus.OCUPADA } }),
-      this.prisma.property.count({ where: { ownerId, isActive: true, estado: PropertyStatus.DISPONIBLE } }),
-      this.prisma.property.count({ where: { ownerId, isActive: true, estado: PropertyStatus.MANTENIMIENTO } }),
-      this.prisma.contract.count({ where: { ownerId, isActive: true, estado: ContractStatus.ACTIVO } }),
+      this.prisma.property.count({
+        where: { ownerId, isActive: true, estado: PropertyStatus.OCUPADA },
+      }),
+      this.prisma.property.count({
+        where: { ownerId, isActive: true, estado: PropertyStatus.DISPONIBLE },
+      }),
+      this.prisma.property.count({
+        where: { ownerId, isActive: true, estado: PropertyStatus.MANTENIMIENTO },
+      }),
+      this.prisma.contract.count({
+        where: { ownerId, isActive: true, estado: ContractStatus.ACTIVO },
+      }),
       this.prisma.contract.count({
         where: {
           ownerId,
@@ -75,15 +92,28 @@ export class DashboardService {
           fechaFin: { lte: thirtyDaysLater },
         },
       }),
-      this.prisma.contract.count({ where: { ownerId, isActive: true, estado: ContractStatus.VENCIDO } }),
+      this.prisma.contract.count({
+        where: { ownerId, isActive: true, estado: ContractStatus.VENCIDO },
+      }),
       this.prisma.$transaction([
-        this.prisma.payment.count({ where: { ownerId, isActive: true, estado: PaymentStatus.PENDIENTE } }),
-        this.prisma.payment.count({ where: { ownerId, isActive: true, estado: PaymentStatus.VENCIDO } }),
-        this.prisma.payment.count({ where: { ownerId, isActive: true, estado: PaymentStatus.PAGADO } }),
+        this.prisma.payment.count({
+          where: { ownerId, isActive: true, estado: PaymentStatus.PENDIENTE },
+        }),
+        this.prisma.payment.count({
+          where: { ownerId, isActive: true, estado: PaymentStatus.VENCIDO },
+        }),
+        this.prisma.payment.count({
+          where: { ownerId, isActive: true, estado: PaymentStatus.PAGADO },
+        }),
       ]),
       this.prisma.payment.aggregate({
         _sum: { monto: true },
-        where: { ownerId, isActive: true, estado: PaymentStatus.PAGADO, fechaPago: { gte: firstDayThisMonth } },
+        where: {
+          ownerId,
+          isActive: true,
+          estado: PaymentStatus.PAGADO,
+          fechaPago: { gte: firstDayThisMonth },
+        },
       }),
       this.prisma.payment.aggregate({
         _sum: { monto: true },
@@ -101,8 +131,12 @@ export class DashboardService {
         _sum: { mora: true },
         where: { ownerId, isActive: true, estado: PaymentStatus.VENCIDO },
       }),
-      this.prisma.maintenanceTicket.count({ where: { ownerId, isActive: true, estado: { in: openStates } } }),
-      this.prisma.maintenanceTicket.count({ where: { ownerId, isActive: true, prioridad: MaintenancePriority.URGENTE } }),
+      this.prisma.maintenanceTicket.count({
+        where: { ownerId, isActive: true, estado: { in: openStates } },
+      }),
+      this.prisma.maintenanceTicket.count({
+        where: { ownerId, isActive: true, prioridad: MaintenancePriority.URGENTE },
+      }),
       this.prisma.maintenanceTicket.count({
         where: {
           ownerId,
@@ -113,17 +147,21 @@ export class DashboardService {
       }),
       this.prisma.maintenanceTicket.aggregate({
         _sum: { costoFinal: true },
-        where: { ownerId, isActive: true, estado: { in: [MaintenanceStatus.RESUELTO, MaintenanceStatus.CERRADO] } },
+        where: {
+          ownerId,
+          isActive: true,
+          estado: { in: [MaintenanceStatus.RESUELTO, MaintenanceStatus.CERRADO] },
+        },
       }),
     ]);
 
     const totalActivosPayments = pendientesPagos + vencidosPagos + pagadosPagos;
-    const collectionRate = totalActivosPayments > 0
-      ? Number(((pagadosPagos / totalActivosPayments) * 100).toFixed(2))
-      : 0;
-    const occupancyRate = totalProps > 0
-      ? Number(((ocupadasProps / totalProps) * 100).toFixed(2))
-      : 0;
+    const collectionRate =
+      totalActivosPayments > 0
+        ? Number(((pagadosPagos / totalActivosPayments) * 100).toFixed(2))
+        : 0;
+    const occupancyRate =
+      totalProps > 0 ? Number(((ocupadasProps / totalProps) * 100).toFixed(2)) : 0;
 
     return {
       propiedades: {
@@ -180,14 +218,18 @@ export class DashboardService {
       this.prisma.payment.aggregate({
         _sum: { monto: true },
         where: {
-          ownerId, isActive: true, estado: PaymentStatus.PAGADO,
+          ownerId,
+          isActive: true,
+          estado: PaymentStatus.PAGADO,
           fechaPago: { gte: thisYearStart },
         },
       }),
       this.prisma.payment.aggregate({
         _sum: { monto: true },
         where: {
-          ownerId, isActive: true, estado: PaymentStatus.PAGADO,
+          ownerId,
+          isActive: true,
+          estado: PaymentStatus.PAGADO,
           fechaPago: { gte: lastYearStart, lte: lastYearEnd },
         },
       }),
@@ -226,18 +268,21 @@ export class DashboardService {
 
     const mesesConIngresos = ultimos12Meses.filter((m) => m.ingresos > 0);
     const totalPeriodo = ultimos12Meses.reduce((sum, m) => sum + m.ingresos, 0);
-    const promedioMensual = mesesConIngresos.length > 0
-      ? Number((totalPeriodo / mesesConIngresos.length).toFixed(2))
-      : 0;
-    const mejorMes = mesesConIngresos.length > 0
-      ? mesesConIngresos.reduce((best, m) => (m.ingresos > best.ingresos ? m : best))
-      : null;
+    const promedioMensual =
+      mesesConIngresos.length > 0 ? Number((totalPeriodo / mesesConIngresos.length).toFixed(2)) : 0;
+    const mejorMes =
+      mesesConIngresos.length > 0
+        ? mesesConIngresos.reduce((best, m) => (m.ingresos > best.ingresos ? m : best))
+        : null;
 
     const anioActual = Number(ingresoAnioActualAgg._sum.monto ?? 0);
     const anioAnterior = Number(ingresoAnioAnteriorAgg._sum.monto ?? 0);
-    const crecimiento = anioAnterior > 0
-      ? Number((((anioActual - anioAnterior) / anioAnterior) * 100).toFixed(2))
-      : anioActual > 0 ? 100 : 0;
+    const crecimiento =
+      anioAnterior > 0
+        ? Number((((anioActual - anioAnterior) / anioAnterior) * 100).toFixed(2))
+        : anioActual > 0
+          ? 100
+          : 0;
 
     return {
       ultimos12Meses,
@@ -277,21 +322,22 @@ export class DashboardService {
 
     const ocupadasPorTipo = new Map(porTipoOcupadas.map((e) => [e.tipoPropiedad, e._count.id]));
 
-    const distribucionPorTipo = porTipo.map((t) => {
-      const totalTipo = t._count.id;
-      const ocupadasTipo = ocupadasPorTipo.get(t.tipoPropiedad) ?? 0;
-      return {
-        tipo: t.tipoPropiedad as string,
-        total: totalTipo,
-        ocupadas: ocupadasTipo,
-        disponibles: totalTipo - ocupadasTipo,
-        rate: totalTipo > 0 ? Number(((ocupadasTipo / totalTipo) * 100).toFixed(2)) : 0,
-      };
-    }).sort((a, b) => b.total - a.total);
+    const distribucionPorTipo = porTipo
+      .map((t) => {
+        const totalTipo = t._count.id;
+        const ocupadasTipo = ocupadasPorTipo.get(t.tipoPropiedad) ?? 0;
+        return {
+          tipo: t.tipoPropiedad as string,
+          total: totalTipo,
+          ocupadas: ocupadasTipo,
+          disponibles: totalTipo - ocupadasTipo,
+          rate: totalTipo > 0 ? Number(((ocupadasTipo / totalTipo) * 100).toFixed(2)) : 0,
+        };
+      })
+      .sort((a, b) => b.total - a.total);
 
-    const occupancyRate = totalPropiedades > 0
-      ? Number(((ocupadas / totalPropiedades) * 100).toFixed(2))
-      : 0;
+    const occupancyRate =
+      totalPropiedades > 0 ? Number(((ocupadas / totalPropiedades) * 100).toFixed(2)) : 0;
 
     return {
       occupancyRate,
@@ -369,9 +415,8 @@ export class DashboardService {
     const parciales = estadoMap.get(PaymentStatus.PARCIAL) ?? 0;
     const cancelados = estadoMap.get(PaymentStatus.CANCELADO) ?? 0;
     const totalActivos = pendientes + vencidos + pagados + parciales;
-    const collectionRate = totalActivos > 0
-      ? Number(((pagados / totalActivos) * 100).toFixed(2))
-      : 0;
+    const collectionRate =
+      totalActivos > 0 ? Number(((pagados / totalActivos) * 100).toFixed(2)) : 0;
 
     return {
       conteos: { pendientes, vencidos, pagados, parciales, cancelados },
@@ -427,7 +472,10 @@ export class DashboardService {
       }),
       this.prisma.maintenanceTicket.aggregate({
         _sum: { costoFinal: true },
-        where: { ...baseWhere, estado: { in: [MaintenanceStatus.RESUELTO, MaintenanceStatus.CERRADO] } },
+        where: {
+          ...baseWhere,
+          estado: { in: [MaintenanceStatus.RESUELTO, MaintenanceStatus.CERRADO] },
+        },
       }),
       this.prisma.maintenanceTicket.aggregate({
         _sum: { costoEstimado: true },

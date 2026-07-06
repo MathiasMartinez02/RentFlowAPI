@@ -1,4 +1,17 @@
-import { Body, Controller, Delete, ForbiddenException, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -16,7 +29,11 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Role } from '../../common/enums/role.enum';
 import { AuthUser, resolveOwnerId } from '../../common/helpers/resolve-owner.helper';
 import { CreatePaymentDto } from './dto/create-payment.dto';
-import { PaginatedPaymentsResponseDto, PaymentResponseDto, PaymentStatsResponseDto } from './dto/payment-response.dto';
+import {
+  PaginatedPaymentsResponseDto,
+  PaymentResponseDto,
+  PaymentStatsResponseDto,
+} from './dto/payment-response.dto';
 import { QueryPaymentsDto } from './dto/query-payments.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { PaymentsService } from './payments.service';
@@ -77,11 +94,7 @@ export class PaymentsController {
   @ApiOkResponse({ type: PaymentResponseDto })
   @ApiNotFoundResponse({ description: 'Pago no encontrado' })
   @ApiBadRequestResponse({ description: 'Pago cancelado o validación de fechaPago fallida' })
-  update(
-    @Param('id') id: string,
-    @CurrentUser() user: AuthUser,
-    @Body() dto: UpdatePaymentDto,
-  ) {
+  update(@Param('id') id: string, @CurrentUser() user: AuthUser, @Body() dto: UpdatePaymentDto) {
     const ownerId = resolveOwnerId(user) ?? user.id;
     return this.paymentsService.update(id, ownerId, dto);
   }

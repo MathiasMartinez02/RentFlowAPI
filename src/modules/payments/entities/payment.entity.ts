@@ -38,7 +38,11 @@ export class PaymentEntity {
   @ApiPropertyOptional({ example: 9000, description: 'Mora calculada en ARS', nullable: true })
   mora: number | null;
 
-  @ApiPropertyOptional({ example: 189000, description: 'Total efectivamente pagado en ARS', nullable: true })
+  @ApiPropertyOptional({
+    example: 189000,
+    description: 'Total efectivamente pagado en ARS',
+    nullable: true,
+  })
   totalPagado: number | null;
 
   @ApiPropertyOptional({ enum: PaymentMethod, nullable: true })

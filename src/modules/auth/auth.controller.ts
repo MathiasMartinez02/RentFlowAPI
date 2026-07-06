@@ -1,22 +1,14 @@
-import {
-  Body,
-  Controller,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { AuthService } from './auth.service';
+
+// Stricter than the global rate limit — 5 attempts per minute per IP — to slow down
+// brute force against login/register/refresh. @Throttle needs literal values per route,
+// so this can't be sourced from ConfigService the way the global limit is.
+const AUTH_THROTTLE = { default: { limit: 5, ttl: 60_000 } };
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -31,6 +23,7 @@ export class AuthController {
   // POST /auth/register
   // ─────────────────────────────────────────────────────────────
   @Public()
+  @Throttle(AUTH_THROTTLE)
   @Post('register')
   @ApiOperation({ summary: 'Register a new user' })
   @ApiResponse({
@@ -47,6 +40,7 @@ export class AuthController {
   // POST /auth/login
   // ─────────────────────────────────────────────────────────────
   @Public()
+  @Throttle(AUTH_THROTTLE)
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email and password' })
@@ -63,6 +57,7 @@ export class AuthController {
   // POST /auth/refresh
   // ─────────────────────────────────────────────────────────────
   @Public()
+  @Throttle(AUTH_THROTTLE)
   @UseGuards(JwtRefreshGuard)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)

@@ -8,7 +8,8 @@ export class ChangeRoleDto {
   role: Role;
 
   @ApiPropertyOptional({
-    description: 'ID del ADMIN al que pertenece este usuario (requerido para FINANZAS, VENDEDOR, MANTENIMIENTO)',
+    description:
+      'ID del ADMIN al que pertenece este usuario (requerido para FINANZAS, VENDEDOR, MANTENIMIENTO)',
   })
   @IsOptional()
   @IsString()

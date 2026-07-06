@@ -91,7 +91,26 @@ enum NotificationType {
   PAYMENT
   CONTRACT
   MAINTENANCE
+  LEAD
   SYSTEM
+}
+
+enum LeadStatus {
+  NUEVO
+  CONTACTADO
+  VISITA_AGENDADA
+  VISITA_REALIZADA
+  NEGOCIACION
+  GANADO
+  PERDIDO
+}
+
+enum LeadOrigin {
+  WEB
+  WHATSAPP
+  PORTAL
+  REFERIDO
+  OTRO
 }
 
 enum NotificationPriority {
@@ -129,6 +148,8 @@ model User {
   notifications        Notification[]
   maintenanceTickets   MaintenanceTicket[]
   activityLogs         ActivityLog[]
+  leads                Lead[]
+  leadsAsignados       Lead[]              @relation("LeadVendedor")
 
   @@map("users")
 }
@@ -163,6 +184,8 @@ model Property {
   banos           Int            @default(1)
   metrosCuadrados Float
   imagenPrincipal String?
+  publicado       Boolean        @default(false)
+  publicadoEn     DateTime?
   isActive        Boolean        @default(true)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -175,12 +198,14 @@ model Property {
   tenants            Tenant[]
   payments           Payment[]
   images             PropertyImage[]
+  leads              Lead[]
 
   @@index([ownerId])
   @@index([estado])
   @@index([ciudad])
   @@index([tipoPropiedad])
   @@index([precioMensual])
+  @@index([publicado])
   @@map("properties")
 }
 
@@ -322,6 +347,37 @@ model MaintenanceTicket {
   @@index([prioridad])
   @@index([categoria])
   @@map("maintenance_tickets")
+}
+
+model Lead {
+  id               String     @id @default(cuid())
+  nombre           String
+  email            String
+  telefono         String
+  mensaje          String?    @db.Text
+  origen           LeadOrigin @default(WEB)
+  estado           LeadStatus @default(NUEVO)
+  fechaVisita      DateTime?
+  visitaConfirmada Boolean    @default(false)
+  notas            String?    @db.Text
+  isActive         Boolean    @default(true)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  propertyId String?
+  property   Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+
+  vendedorId String?
+  vendedor   User?   @relation("LeadVendedor", fields: [vendedorId], references: [id], onDelete: SetNull)
+
+  @@index([ownerId])
+  @@index([estado])
+  @@index([propertyId])
+  @@index([vendedorId])
+  @@map("leads")
 }
 
 model PropertyImage {

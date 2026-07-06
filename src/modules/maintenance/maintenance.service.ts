@@ -90,7 +90,11 @@ export class MaintenanceService {
 
     const updated = await this.maintenanceRepository.update(id, data);
 
-    if (nuevoEstado === MaintenanceStatus.RESUELTO && ticket.estado !== MaintenanceStatus.RESUELTO && ownerId) {
+    if (
+      nuevoEstado === MaintenanceStatus.RESUELTO &&
+      ticket.estado !== MaintenanceStatus.RESUELTO &&
+      ownerId
+    ) {
       void this.notificationsService.notify(ownerId, {
         titulo: 'Ticket resuelto',
         mensaje: `El ticket "${ticket.titulo}" fue marcado como resuelto`,
@@ -103,6 +107,13 @@ export class MaintenanceService {
         entityType: 'MaintenanceTicket',
         entityId: id,
         descripcion: `Ticket "${ticket.titulo}" resuelto`,
+      });
+    } else if (ownerId) {
+      void this.notificationsService.logActivity(ownerId, {
+        action: 'MAINTENANCE_UPDATED',
+        entityType: 'MaintenanceTicket',
+        entityId: id,
+        descripcion: `Ticket "${ticket.titulo}" actualizado`,
       });
     }
 
@@ -118,6 +129,15 @@ export class MaintenanceService {
 
     await this.maintenanceRepository.softDelete(id);
     this.logger.log(`Ticket de mantenimiento cerrado: ${id} por usuario ${ownerId}`);
+
+    if (ownerId) {
+      void this.notificationsService.logActivity(ownerId, {
+        action: 'MAINTENANCE_CLOSED',
+        entityType: 'MaintenanceTicket',
+        entityId: id,
+        descripcion: `Ticket "${ticket.titulo}" cerrado`,
+      });
+    }
   }
 
   async getOverview(ownerId: string | undefined) {

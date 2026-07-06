@@ -1,4 +1,17 @@
-import { Body, Controller, Delete, ForbiddenException, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBadRequestResponse,
@@ -70,12 +83,10 @@ export class ContractsController {
   @ApiOperation({ summary: 'Actualizar un contrato [ADMIN/CLIENTE/VENDEDOR/SUPER_ADMIN]' })
   @ApiOkResponse({ type: ContractResponseDto })
   @ApiNotFoundResponse({ description: 'Contrato no encontrado' })
-  @ApiBadRequestResponse({ description: 'No se puede modificar un contrato cancelado o fechas inválidas' })
-  update(
-    @Param('id') id: string,
-    @CurrentUser() user: AuthUser,
-    @Body() dto: UpdateContractDto,
-  ) {
+  @ApiBadRequestResponse({
+    description: 'No se puede modificar un contrato cancelado o fechas inválidas',
+  })
+  update(@Param('id') id: string, @CurrentUser() user: AuthUser, @Body() dto: UpdateContractDto) {
     const ownerId = resolveOwnerId(user) ?? user.id;
     return this.contractsService.update(id, ownerId, dto);
   }
@@ -83,7 +94,9 @@ export class ContractsController {
   @Delete(':id')
   @CanManageContracts()
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Cancelar un contrato y liberar la propiedad [ADMIN/CLIENTE/VENDEDOR/SUPER_ADMIN]' })
+  @ApiOperation({
+    summary: 'Cancelar un contrato y liberar la propiedad [ADMIN/CLIENTE/VENDEDOR/SUPER_ADMIN]',
+  })
   @ApiNotFoundResponse({ description: 'Contrato no encontrado' })
   @ApiBadRequestResponse({ description: 'El contrato ya está cancelado' })
   remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {

@@ -1,4 +1,16 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -54,11 +66,7 @@ export class PropertiesController {
   @ApiOperation({ summary: 'Actualizar una propiedad [ADMIN/CLIENTE/SUPER_ADMIN]' })
   @ApiOkResponse({ type: PropertyResponseDto })
   @ApiNotFoundResponse({ description: 'Propiedad no encontrada' })
-  update(
-    @Param('id') id: string,
-    @CurrentUser() user: AuthUser,
-    @Body() dto: UpdatePropertyDto,
-  ) {
+  update(@Param('id') id: string, @CurrentUser() user: AuthUser, @Body() dto: UpdatePropertyDto) {
     return this.propertiesService.update(id, resolveOwnerId(user), dto);
   }
 

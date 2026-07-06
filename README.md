@@ -247,10 +247,58 @@ src/
 
 ## Connecting a Frontend
 
-See [frontend-example/src/lib/api/](frontend-example/src/lib/api/) for ready-to-use TypeScript API clients built with axios. Copy them into any React/Next.js project.
-
-Features included:
+The reference implementation lives in `RentFlow Front` (Next.js). Its `src/lib/api-client.ts` already covers:
 - Automatic JWT token attachment
 - Silent token refresh on 401 (with queue for concurrent requests)
 - Response envelope unwrapping `{ success, message, data }` → `data`
-- WebSocket connection helper with reconnection
+- WebSocket connection via Socket.IO with reconnection
+
+---
+
+## Testing
+
+```bash
+# Unit tests
+npm run test
+npm run test:cov      # with coverage report
+
+# E2E tests (requires a running MySQL test database)
+# 1. Point DATABASE_URL to a dedicated test database whose name contains "test", e.g.:
+export DATABASE_URL="mysql://rentflow:rentflow_password@localhost:3306/rentflow_test"
+export NODE_ENV=test
+# 2. Apply the schema
+npx prisma migrate deploy
+# 3. Run the e2e suite
+npm run test:e2e
+```
+
+**Important — read before running e2e tests:** `PrismaService.cleanDatabase()` truncates every table and runs automatically between e2e test runs. It refuses to execute unless BOTH `NODE_ENV=test` AND the database name in `DATABASE_URL` contains the word `test` — this exists because it once ran against the real Railway database (name `railway`) and wiped it, since only `NODE_ENV` was set at the time. Never rename a shared/production database to include "test", and never export a `DATABASE_URL` pointing at a real database while `NODE_ENV=test` is set in your shell.
+
+CI (`.github/workflows/ci.yml`) runs lint, build, unit tests and e2e tests (against a disposable `mysql:8.0` service container) on every push and pull request.
+
+---
+
+## Rate Limiting
+
+The whole API is throttled to `THROTTLE_LIMIT` requests per `THROTTLE_TTL` seconds per IP (defaults: 100/60s). `/auth/login`, `/auth/register` and `/auth/refresh` have an additional, stricter limit of 5 requests/minute to slow down brute-force attempts.
+
+---
+
+## Database Migrations
+
+From this point on, generate migrations incrementally with `npx prisma migrate dev --name <description>` for every schema change, instead of consolidating changes into a single migration. This keeps the migration history auditable and makes production rollbacks/review possible.
+
+---
+
+## Backups
+
+```bash
+# Manual backup (reads DATABASE_URL from the environment, or pass host/user/pass/db explicitly)
+./scripts/backup-db.sh
+```
+
+The script produces a timestamped, gzip-compressed `mysqldump` under `backups/`. To automate it:
+- **Cron (self-hosted/VPS):** schedule `scripts/backup-db.sh` via crontab and rotate/upload the output to external storage (S3, Backblaze, etc.).
+- **GitHub Actions (scheduled workflow):** a commented example is included at the bottom of `scripts/backup-db.sh`'s companion notes — wire it to your own storage credentials (repo secrets) before enabling it, since none are provided here.
+
+Always verify a backup by restoring it to a scratch database periodically — an untested backup is not a backup.

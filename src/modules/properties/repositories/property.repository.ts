@@ -11,7 +11,9 @@ export class PropertyRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(ownerId: string, dto: CreatePropertyDto) {
-    return this.prisma.property.create({ data: { ...dto, ownerId } as Prisma.PropertyUncheckedCreateInput });
+    return this.prisma.property.create({
+      data: { ...dto, ownerId } as Prisma.PropertyUncheckedCreateInput,
+    });
   }
 
   async findMany(ownerId: string | undefined, query: QueryPropertiesDto) {
@@ -38,7 +40,7 @@ export class PropertyRepository {
     });
   }
 
-  async update(id: string, dto: UpdatePropertyDto) {
+  async update(id: string, dto: UpdatePropertyDto & { publicadoEn?: Date | null }) {
     return this.prisma.property.update({
       where: { id },
       data: dto as Prisma.PropertyUpdateInput,
@@ -52,7 +54,10 @@ export class PropertyRepository {
     });
   }
 
-  private buildWhere(ownerId: string | undefined, query: QueryPropertiesDto): Prisma.PropertyWhereInput {
+  private buildWhere(
+    ownerId: string | undefined,
+    query: QueryPropertiesDto,
+  ): Prisma.PropertyWhereInput {
     const where: Prisma.PropertyWhereInput = {
       ...(ownerId && { ownerId }),
       isActive: true,

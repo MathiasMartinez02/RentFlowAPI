@@ -52,7 +52,10 @@ export class ContractEntity {
   @ApiProperty({ enum: ContractStatus, example: ContractStatus.ACTIVO })
   estado: ContractStatus;
 
-  @ApiPropertyOptional({ example: 'Contrato bajo ley 23.091. Ajuste semestral por IPC.', nullable: true })
+  @ApiPropertyOptional({
+    example: 'Contrato bajo ley 23.091. Ajuste semestral por IPC.',
+    nullable: true,
+  })
   observaciones: string | null;
 
   @ApiProperty({ example: true })

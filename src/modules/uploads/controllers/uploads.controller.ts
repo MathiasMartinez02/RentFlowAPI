@@ -76,10 +76,7 @@ export class UploadsController {
   @ApiOperation({ summary: 'Eliminar una imagen de propiedad' })
   @ApiNoContentResponse()
   @ApiNotFoundResponse({ description: 'Imagen no encontrada' })
-  async deletePropertyImage(
-    @Param('imageId') imageId: string,
-    @CurrentUser('id') ownerId: string,
-  ) {
+  async deletePropertyImage(@Param('imageId') imageId: string, @CurrentUser('id') ownerId: string) {
     return this.uploadsService.deletePropertyImage(imageId, ownerId);
   }
 
@@ -101,10 +98,7 @@ export class UploadsController {
     },
   })
   @ApiCreatedResponse({ type: AvatarResponseDto })
-  async uploadAvatar(
-    @UploadedFile() file: Express.Multer.File,
-    @CurrentUser('id') userId: string,
-  ) {
+  async uploadAvatar(@UploadedFile() file: Express.Multer.File, @CurrentUser('id') userId: string) {
     return this.uploadsService.uploadAvatar(file, userId);
   }
 }

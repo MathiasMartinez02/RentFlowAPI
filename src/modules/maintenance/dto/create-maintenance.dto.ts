@@ -1,17 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import {
-  IsEnum,
-  IsNumber,
-  IsOptional,
-  IsPositive,
-  IsString,
-  MinLength,
-} from 'class-validator';
-import {
-  MaintenanceCategory,
-  MaintenancePriority,
-} from '../../../common/enums/maintenance.enum';
+import { IsEnum, IsNumber, IsOptional, IsPositive, IsString, MinLength } from 'class-validator';
+import { MaintenanceCategory, MaintenancePriority } from '../../../common/enums/maintenance.enum';
 
 export class CreateMaintenanceDto {
   @ApiProperty({ example: 'property-id-here' })

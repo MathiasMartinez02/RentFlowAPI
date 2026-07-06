@@ -1,5 +1,4 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { NotificationType } from '@prisma/client';
 import { PropertyRepository } from './repositories/property.repository';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
@@ -40,12 +39,44 @@ export class PropertiesService {
   }
 
   async update(id: string, ownerId: string | undefined, dto: UpdatePropertyDto) {
-    await this.findOne(id, ownerId);
-    return this.propertyRepository.update(id, dto);
+    const property = await this.findOne(id, ownerId);
+
+    // Al publicar por primera vez, registrar la fecha; al despublicar, limpiarla.
+    let publicadoEn: Date | null | undefined;
+    if (dto.publicado === true && !property.publicado) {
+      publicadoEn = new Date();
+    } else if (dto.publicado === false) {
+      publicadoEn = null;
+    }
+
+    const updated = await this.propertyRepository.update(
+      id,
+      publicadoEn !== undefined ? { ...dto, publicadoEn } : dto,
+    );
+
+    if (ownerId) {
+      void this.notificationsService.logActivity(ownerId, {
+        action: 'PROPERTY_UPDATED',
+        entityType: 'Property',
+        entityId: id,
+        descripcion: `Propiedad "${updated.nombre}" actualizada`,
+      });
+    }
+
+    return updated;
   }
 
   async remove(id: string, ownerId: string | undefined) {
-    await this.findOne(id, ownerId);
+    const property = await this.findOne(id, ownerId);
     await this.propertyRepository.softDelete(id);
+
+    if (ownerId) {
+      void this.notificationsService.logActivity(ownerId, {
+        action: 'PROPERTY_DELETED',
+        entityType: 'Property',
+        entityId: id,
+        descripcion: `Propiedad "${property.nombre}" eliminada`,
+      });
+    }
   }
 }

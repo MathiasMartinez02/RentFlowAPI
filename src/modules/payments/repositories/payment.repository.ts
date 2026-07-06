@@ -3,7 +3,6 @@ import { PaymentMethod, PaymentStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
 import { buildPaginatedResult, getPaginationMeta } from '../../../common/utils/pagination.util';
 import { CreatePaymentDto } from '../dto/create-payment.dto';
-import { UpdatePaymentDto } from '../dto/update-payment.dto';
 import { QueryPaymentsDto, SortByPayment, SortOrder } from '../dto/query-payments.dto';
 import { IPaymentStats } from '../interfaces/payment.interface';
 
@@ -17,12 +16,7 @@ const PAYMENT_INCLUDE = {
 export class PaymentRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(
-    ownerId: string,
-    tenantId: string,
-    propertyId: string,
-    dto: CreatePaymentDto,
-  ) {
+  async create(ownerId: string, tenantId: string, propertyId: string, dto: CreatePaymentDto) {
     return this.prisma.payment.create({
       data: {
         ownerId,
@@ -101,34 +95,41 @@ export class PaymentRepository {
     const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const baseWhere = { ...(ownerId && { ownerId }), isActive: true };
 
-    const [cobradoMes, pendientes, vencidos, pagados, ingresosTotales, montoPendiente, montoVencido] =
-      await this.prisma.$transaction([
-        this.prisma.payment.aggregate({
-          _sum: { monto: true },
-          where: { ...baseWhere, estado: PaymentStatus.PAGADO, fechaPago: { gte: firstDayOfMonth } },
-        }),
-        this.prisma.payment.count({
-          where: { ...baseWhere, estado: PaymentStatus.PENDIENTE },
-        }),
-        this.prisma.payment.count({
-          where: { ...baseWhere, estado: PaymentStatus.VENCIDO },
-        }),
-        this.prisma.payment.count({
-          where: { ...baseWhere, estado: PaymentStatus.PAGADO },
-        }),
-        this.prisma.payment.aggregate({
-          _sum: { monto: true },
-          where: { ...baseWhere, estado: PaymentStatus.PAGADO },
-        }),
-        this.prisma.payment.aggregate({
-          _sum: { monto: true },
-          where: { ...baseWhere, estado: PaymentStatus.PENDIENTE },
-        }),
-        this.prisma.payment.aggregate({
-          _sum: { monto: true },
-          where: { ...baseWhere, estado: PaymentStatus.VENCIDO },
-        }),
-      ]);
+    const [
+      cobradoMes,
+      pendientes,
+      vencidos,
+      pagados,
+      ingresosTotales,
+      montoPendiente,
+      montoVencido,
+    ] = await this.prisma.$transaction([
+      this.prisma.payment.aggregate({
+        _sum: { monto: true },
+        where: { ...baseWhere, estado: PaymentStatus.PAGADO, fechaPago: { gte: firstDayOfMonth } },
+      }),
+      this.prisma.payment.count({
+        where: { ...baseWhere, estado: PaymentStatus.PENDIENTE },
+      }),
+      this.prisma.payment.count({
+        where: { ...baseWhere, estado: PaymentStatus.VENCIDO },
+      }),
+      this.prisma.payment.count({
+        where: { ...baseWhere, estado: PaymentStatus.PAGADO },
+      }),
+      this.prisma.payment.aggregate({
+        _sum: { monto: true },
+        where: { ...baseWhere, estado: PaymentStatus.PAGADO },
+      }),
+      this.prisma.payment.aggregate({
+        _sum: { monto: true },
+        where: { ...baseWhere, estado: PaymentStatus.PENDIENTE },
+      }),
+      this.prisma.payment.aggregate({
+        _sum: { monto: true },
+        where: { ...baseWhere, estado: PaymentStatus.VENCIDO },
+      }),
+    ]);
 
     const totalActivos = pendientes + vencidos + pagados;
     const porcentajeCobranza =
@@ -145,7 +146,10 @@ export class PaymentRepository {
     };
   }
 
-  private buildWhere(ownerId: string | undefined, query: QueryPaymentsDto): Prisma.PaymentWhereInput {
+  private buildWhere(
+    ownerId: string | undefined,
+    query: QueryPaymentsDto,
+  ): Prisma.PaymentWhereInput {
     const where: Prisma.PaymentWhereInput = { ...(ownerId && { ownerId }), isActive: true };
 
     if (query.estado) where.estado = query.estado as PaymentStatus;

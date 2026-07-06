@@ -28,9 +28,23 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     await this.$disconnect();
   }
 
+  /**
+   * Truncates every table. Destructive and irreversible — guarded by two independent checks
+   * (NODE_ENV and a DATABASE_URL naming convention) after an incident where this ran against
+   * the real Railway database because NODE_ENV=test was set but DATABASE_URL was not.
+   */
   async cleanDatabase() {
     if (process.env.NODE_ENV !== 'test') {
-      throw new Error('cleanDatabase is only available in test environment');
+      throw new Error('cleanDatabase is only available when NODE_ENV=test');
+    }
+    const databaseUrl = process.env.DATABASE_URL ?? '';
+    const databaseName = databaseUrl.split('/').pop()?.split('?')[0] ?? '';
+    if (!databaseName.toLowerCase().includes('test')) {
+      throw new Error(
+        `cleanDatabase refused to run: DATABASE_URL points to "${databaseName}", which does not ` +
+          'look like a test database (its name must contain "test"). This check exists to prevent ' +
+          'accidentally wiping a shared/production database.',
+      );
     }
     const tables = await this.$queryRaw<{ TABLE_NAME: string }[]>`
       SELECT TABLE_NAME FROM information_schema.tables

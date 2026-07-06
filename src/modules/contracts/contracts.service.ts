@@ -111,6 +111,13 @@ export class ContractsService {
       });
     }
 
+    void this.notificationsService.logActivity(ownerId, {
+      action: 'CONTRACT_UPDATED',
+      entityType: 'Contract',
+      entityId: id,
+      descripcion: `Contrato ${contract.codigoContrato} actualizado`,
+    });
+
     return updated;
   }
 

@@ -26,7 +26,9 @@ export class CreatePaymentDto {
     pattern: '^\\d{4}-(0[1-9]|1[0-2])$',
   })
   @IsString()
-  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/, { message: 'periodo debe tener formato YYYY-MM (ej: 2024-01)' })
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/, {
+    message: 'periodo debe tener formato YYYY-MM (ej: 2024-01)',
+  })
   periodo: string;
 
   @ApiProperty({ example: '2024-01-05', description: 'Fecha límite de pago' })
@@ -51,7 +53,11 @@ export class CreatePaymentDto {
   @Type(() => Number)
   mora?: number;
 
-  @ApiPropertyOptional({ example: 189000, description: 'Monto total efectivamente pagado en ARS', minimum: 0 })
+  @ApiPropertyOptional({
+    example: 189000,
+    description: 'Monto total efectivamente pagado en ARS',
+    minimum: 0,
+  })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
@@ -63,7 +69,11 @@ export class CreatePaymentDto {
   @IsEnum(PaymentMethod)
   metodoPago?: PaymentMethod;
 
-  @ApiPropertyOptional({ example: 'TRF-20240103-001', description: 'Número de referencia o comprobante', maxLength: 100 })
+  @ApiPropertyOptional({
+    example: 'TRF-20240103-001',
+    description: 'Número de referencia o comprobante',
+    maxLength: 100,
+  })
   @IsOptional()
   @IsString()
   @MaxLength(100)

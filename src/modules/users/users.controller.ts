@@ -93,15 +93,13 @@ export class UsersController {
     @Param('id') id: string,
     @Body() dto: ChangeRoleDto,
     @CurrentUser('role') callerRole: string,
+    @CurrentUser('id') callerId: string,
   ) {
     // ADMIN no puede promover a SUPER_ADMIN ni a otro ADMIN
-    if (
-      callerRole === Role.ADMIN &&
-      [Role.SUPER_ADMIN, Role.ADMIN].includes(dto.role)
-    ) {
+    if (callerRole === Role.ADMIN && [Role.SUPER_ADMIN, Role.ADMIN].includes(dto.role)) {
       throw new Error('ADMIN cannot assign SUPER_ADMIN or ADMIN roles');
     }
-    return this.usersService.changeRole(id, dto);
+    return this.usersService.changeRole(id, dto, callerId);
   }
 
   @Post(':id/activate')
@@ -109,8 +107,8 @@ export class UsersController {
   @ApiOperation({ summary: 'Reactivar un usuario desactivado [ADMIN/SUPER_ADMIN]' })
   @ApiParam({ name: 'id', description: 'User CUID' })
   @ApiOkResponse({ description: 'User activated successfully' })
-  activate(@Param('id') id: string) {
-    return this.usersService.activate(id);
+  activate(@Param('id') id: string, @CurrentUser('id') callerId: string) {
+    return this.usersService.activate(id, callerId);
   }
 
   @Delete(':id/deactivate')
@@ -118,7 +116,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Desactivar usuario (soft delete) [ADMIN/SUPER_ADMIN]' })
   @ApiParam({ name: 'id', description: 'User CUID' })
   @ApiOkResponse({ description: 'User deactivated successfully' })
-  deactivate(@Param('id') id: string) {
-    return this.usersService.deactivate(id);
+  deactivate(@Param('id') id: string, @CurrentUser('id') callerId: string) {
+    return this.usersService.deactivate(id, callerId);
   }
 }

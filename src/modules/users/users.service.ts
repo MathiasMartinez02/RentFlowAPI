@@ -1,11 +1,7 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Role } from '../../common/enums/role.enum';
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { buildPaginatedResult, getPaginationMeta } from '../../common/utils/pagination.util';
 import { CreateUserDto } from './dto/create-user.dto';
 import { FilterUsersDto } from './dto/filter-users.dto';
@@ -34,7 +30,10 @@ const USER_SELECT = {
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   // ─── Write ────────────────────────────────────────────────────
 
@@ -49,6 +48,14 @@ export class UsersService {
       data: dto,
       select: USER_SELECT,
     });
+
+    void this.notificationsService.logActivity(id, {
+      action: 'USER_PROFILE_UPDATED',
+      entityType: 'User',
+      entityId: id,
+      descripcion: 'Perfil de usuario actualizado',
+    });
+
     return { message: 'Profile updated successfully', data: user };
   }
 
@@ -59,21 +66,37 @@ export class UsersService {
     });
   }
 
-  async deactivate(id: string) {
+  async deactivate(id: string, actorId: string) {
     await this.assertExists(id);
     await this.prisma.user.update({ where: { id }, data: { isActive: false } });
     this.logger.log(`User deactivated: ${id}`);
+
+    void this.notificationsService.logActivity(actorId, {
+      action: 'USER_DEACTIVATED',
+      entityType: 'User',
+      entityId: id,
+      descripcion: 'Usuario desactivado',
+    });
+
     return { message: 'User deactivated successfully', data: null };
   }
 
-  async activate(id: string) {
+  async activate(id: string, actorId: string) {
     await this.assertExists(id);
     await this.prisma.user.update({ where: { id }, data: { isActive: true } });
     this.logger.log(`User activated: ${id}`);
+
+    void this.notificationsService.logActivity(actorId, {
+      action: 'USER_ACTIVATED',
+      entityType: 'User',
+      entityId: id,
+      descripcion: 'Usuario activado',
+    });
+
     return { message: 'User activated successfully', data: null };
   }
 
-  async changeRole(id: string, dto: ChangeRoleDto) {
+  async changeRole(id: string, dto: ChangeRoleDto, actorId: string) {
     await this.assertExists(id);
 
     const updateData: {
@@ -101,6 +124,14 @@ export class UsersService {
     });
 
     this.logger.log(`Role changed for user ${id}: ${user.role}`);
+
+    void this.notificationsService.logActivity(actorId, {
+      action: 'USER_ROLE_CHANGED',
+      entityType: 'User',
+      entityId: id,
+      descripcion: `Rol del usuario cambiado a ${user.role}`,
+    });
+
     return { message: 'User role updated successfully', data: user };
   }
 

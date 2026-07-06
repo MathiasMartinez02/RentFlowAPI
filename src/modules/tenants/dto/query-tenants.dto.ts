@@ -25,7 +25,10 @@ export class QueryTenantsDto extends PaginationDto {
   @IsEnum(TenantStatus)
   estado?: TenantStatus;
 
-  @ApiPropertyOptional({ example: 'clxyz_property_id', description: 'Filtrar por propiedad asociada' })
+  @ApiPropertyOptional({
+    example: 'clxyz_property_id',
+    description: 'Filtrar por propiedad asociada',
+  })
   @IsOptional()
   @IsString()
   propertyId?: string;

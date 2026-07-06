@@ -2,7 +2,7 @@ import {
   PrismaClient, Role, PropertyStatus, PropertyType, TenantStatus,
   ContractStatus, PaymentStatus, PaymentMethod,
   MaintenanceStatus, MaintenancePriority, MaintenanceCategory,
-  NotificationType, NotificationPriority,
+  NotificationType, NotificationPriority, LeadStatus, LeadOrigin,
 } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
@@ -248,14 +248,16 @@ async function main() {
       ciudad: 'Buenos Aires', provincia: 'CABA', codigoPostal: 'C1407',
       descripcion: '2 ambientes con balcón. Bien ubicado, a metros del subte A.',
       tipoPropiedad: PropertyType.APARTAMENTO, estado: PropertyStatus.DISPONIBLE,
-      precioMensual: 145000, habitaciones: 2, banos: 1, metrosCuadrados: 55 } }),
+      precioMensual: 145000, habitaciones: 2, banos: 1, metrosCuadrados: 55,
+      publicado: true, publicadoEn: daysAgo(10) } }),
 
     prisma.property.create({ data: { ownerId: uid,
       nombre: 'Oficina Palermo Tech', direccion: 'Armenia 1647 Piso 2',
       ciudad: 'Buenos Aires', provincia: 'CABA', codigoPostal: 'C1414',
       descripcion: 'Oficina moderna en Palermo Hollywood. Planta libre con fibra óptica y AC.',
       tipoPropiedad: PropertyType.OFICINA, estado: PropertyStatus.DISPONIBLE,
-      precioMensual: 350000, habitaciones: 1, banos: 1, metrosCuadrados: 80 } }),
+      precioMensual: 350000, habitaciones: 1, banos: 1, metrosCuadrados: 80,
+      publicado: true, publicadoEn: daysAgo(6) } }),
 
     prisma.property.create({ data: { ownerId: uid,
       nombre: 'Casa Tigre', direccion: 'Ruta 27 km 3.5',
@@ -508,6 +510,46 @@ async function main() {
   ]);
   console.log('✅ 8 maintenance tickets created');
 
+  // ─── Leads (6) — pipeline de captación, propiedades publicadas p10/p11 ──
+  await prisma.lead.createMany({
+    data: [
+      { ownerId: uid, vendedorId: vendedor.id, propertyId: p10.id,
+        nombre: 'Martina Suárez', email: 'martina.suarez@gmail.com', telefono: '+54 11 6123-4567',
+        mensaje: 'Hola, ¿el Depto. Flores 4B sigue disponible? Me interesa para mudarme el mes que viene.',
+        origen: LeadOrigin.WEB, estado: LeadStatus.NUEVO, createdAt: daysAgo(1) },
+
+      { ownerId: uid, vendedorId: vendedor.id, propertyId: p11.id,
+        nombre: 'Ignacio Ferreyra', email: 'ignacio.ferreyra@empresa.com', telefono: '+54 11 5234-6789',
+        mensaje: 'Buscamos oficina para relocalizar el equipo, ¿se puede coordinar una visita esta semana?',
+        origen: LeadOrigin.WHATSAPP, estado: LeadStatus.CONTACTADO, createdAt: daysAgo(4) },
+
+      { ownerId: uid, vendedorId: vendedor.id, propertyId: p10.id,
+        nombre: 'Rocío Benítez', email: 'rocio.benitez@outlook.com', telefono: '+54 11 4321-9876',
+        mensaje: 'Me gustaría visitar la propiedad el sábado por la mañana.',
+        origen: LeadOrigin.WEB, estado: LeadStatus.VISITA_AGENDADA,
+        fechaVisita: daysFromNow(3), visitaConfirmada: true, createdAt: daysAgo(6) },
+
+      { ownerId: uid, vendedorId: vendedor.id, propertyId: p11.id,
+        nombre: 'Tomás Acosta', email: 'tomas.acosta@gmail.com', telefono: '+54 11 3987-6543',
+        mensaje: 'Ya visitamos la oficina, estamos evaluando el contrato con el resto del equipo.',
+        origen: LeadOrigin.PORTAL, estado: LeadStatus.NEGOCIACION,
+        notas: 'Piden ajustar el plazo de contrato a 24 meses. Consultar con el propietario.',
+        createdAt: daysAgo(10) },
+
+      { ownerId: uid, vendedorId: vendedor.id,
+        nombre: 'Julieta Molina', email: 'julieta.molina@gmail.com', telefono: '+54 11 2456-7890',
+        mensaje: 'Consulta general por alquileres en zona Palermo/Belgrano.',
+        origen: LeadOrigin.REFERIDO, estado: LeadStatus.PERDIDO,
+        notas: 'Encontró una propiedad con otra inmobiliaria.', createdAt: daysAgo(20) },
+
+      { ownerId: uid, propertyId: p10.id,
+        nombre: 'Nicolás Paz', email: 'nicolas.paz@gmail.com', telefono: '+54 11 6789-0123',
+        mensaje: 'Cerramos la operación, ¿cómo seguimos con el contrato?',
+        origen: LeadOrigin.WEB, estado: LeadStatus.GANADO, createdAt: daysAgo(2) },
+    ],
+  });
+  console.log('✅ 6 leads created');
+
   // ─── Notifications (15) ─────────────────────────────────────
   await prisma.notification.createMany({
     data: [
@@ -620,11 +662,12 @@ async function main() {
 │  CLIENTE       cliente@rentflow.com      Demo123*       │
 │  INQUILINO     inquilino@rentflow.com    Demo123*       │
 ├─────────────────────────────────────────────────────────┤
-│  🏠  Propiedades: 12 (9 ocupadas · 75%)                 │
+│  🏠  Propiedades: 12 (9 ocupadas · 75% · 2 publicadas)  │
 │  👤  Inquilinos:  15                                    │
 │  📋  Contratos:   10 (9 activos)                        │
 │  💰  Facturación: $${(totalMensual / 1000).toFixed(0)}k/mes                          │
 │  🔧  Mantenimiento: 8 tickets                          │
+│  🎯  Leads:       6 (pipeline)                          │
 │  🔔  Notificaciones: 15                                │
 ├─────────────────────────────────────────────────────────┤
 │  📍  API:   http://localhost:3000/api/v1                │
